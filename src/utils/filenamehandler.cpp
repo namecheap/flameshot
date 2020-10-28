@@ -44,6 +44,7 @@ QString FileNameHandler::parseFilename(const QString& name)
         res.chop(1);
     }
     std::time_t t = std::time(NULL);
+    std::setlocale(LC_ALL, "");
 
     char* tempData = QStringTocharArr(res);
     char data[MAX_CHARACTERS] = { 0 };
