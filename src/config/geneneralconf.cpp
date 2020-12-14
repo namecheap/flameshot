@@ -335,7 +335,7 @@ void GeneneralConf::initSaveAfterCopy()
     m_savePath = new QLineEdit(
       QStandardPaths::writableLocation(QStandardPaths::PicturesLocation), this);
     m_savePath->setDisabled(true);
-    QString foreground = this->palette().foreground().color().name();
+    QString foreground = this->palette().windowText().color().name();
     m_savePath->setStyleSheet(QStringLiteral("color: %1").arg(foreground));
     pathLayout->addWidget(m_savePath);
 

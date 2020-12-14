@@ -129,11 +129,26 @@ void CaptureLauncher::startDrag()
 {
     QDrag* dragHandler = new QDrag(this);
     QMimeData* mimeData = new QMimeData;
+#if (defined(Q_OS_MAC) || defined(Q_OS_MAC64) || defined(Q_OS_MACOS) ||        \
+     defined(Q_OS_MACX) || defined(Q_OS_WIN))
+    // update deprecated method, is not available in linux distros yet
+    mimeData->setImageData(m_imageLabel->pixmap(Qt::ReturnByValue));
+#else
     mimeData->setImageData(m_imageLabel->pixmap());
+#endif
     dragHandler->setMimeData(mimeData);
 
+#if (defined(Q_OS_MAC) || defined(Q_OS_MAC64) || defined(Q_OS_MACOS) ||        \
+     defined(Q_OS_MACX) || defined(Q_OS_WIN))
+    // update deprecated method, is not available in linux distros yet
+    dragHandler->setPixmap(
+      m_imageLabel->pixmap(Qt::ReturnByValue)
+        .scaled(
+          256, 256, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+#else
     dragHandler->setPixmap(m_imageLabel->pixmap()->scaled(
       256, 256, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+#endif
     dragHandler->exec();
 }
 

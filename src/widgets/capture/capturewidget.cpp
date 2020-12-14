@@ -665,10 +665,12 @@ void CaptureWidget::wheelEvent(QWheelEvent* e)
 
     m_context.thickness += thicknessOffset;
     m_context.thickness = qBound(0, m_context.thickness, 100);
-    QPoint topLeft =
-      qApp->desktop()
-        ->screenGeometry(qApp->desktop()->screenNumber(QCursor::pos()))
-        .topLeft();
+    QPoint topLeft = QPoint(0, 0);
+    QScreen* currentScreen = QGuiApplication::screenAt(QCursor::pos());
+    if (nullptr != currentScreen) {
+        topLeft = currentScreen->geometry().topLeft();
+    }
+
     int offset = m_notifierBox->width() / 4;
     m_notifierBox->move(mapFromGlobal(topLeft) + QPoint(offset, offset));
     m_notifierBox->showMessage(QString::number(m_context.thickness));
