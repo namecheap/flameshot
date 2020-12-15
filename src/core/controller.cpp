@@ -91,6 +91,16 @@ Controller::Controller()
     // CaptureWidget
     QScreen* currentScreen = QGuiApplication::screenAt(QCursor::pos());
     currentScreen->grabWindow(QApplication::desktop()->winId(), 0, 0, 1, 1);
+
+    // catch new display was added and re-read them
+    connect(qGuiApp,
+            &QGuiApplication::screenAdded,
+            this,
+            &Controller::screensChanged);
+//    connect(qGuiApp,
+//            &QGuiApplication::screenRemoved,
+//            this,
+//            &Controller::screensChanged);
 #endif
     getLatestAvailableVersion();
 }
@@ -114,6 +124,16 @@ void Controller::enableExports()
     connect(
       this, &Controller::captureFailed, this, &Controller::handleCaptureFailed);
 }
+
+#if (defined(Q_OS_MAC) || defined(Q_OS_MAC64) || defined(Q_OS_MACOS) ||        \
+     defined(Q_OS_MACX))
+void Controller::screensChanged(QScreen* screen)
+{
+    qWarning() << "New screen" << screen;
+    qGuiApp->sync();
+    qWarning() << qGuiApp->screens();
+}
+#endif
 
 void Controller::getLatestAvailableVersion()
 {
@@ -213,6 +233,7 @@ void Controller::requestCapture(const CaptureRequest& request)
 void Controller::startVisualCapture(const uint id,
                                     const QString& forcedSavePath)
 {
+    qWarning() << "Controller::startVisualCapture";
     if (!m_captureWindow) {
         QWidget* modalWidget = nullptr;
         do {
@@ -240,6 +261,8 @@ void Controller::startVisualCapture(const uint id,
 #elif (defined(Q_OS_MAC) || defined(Q_OS_MAC64) || defined(Q_OS_MACOS) ||      \
        defined(Q_OS_MACX))
         // In "Emulate fullscreen mode"
+        // FIXME - for debug purposes only, should be removed
+        qGuiApp->sync();
         m_captureWindow->showFullScreen();
         m_captureWindow->activateWindow();
         m_captureWindow->raise();

@@ -82,6 +82,10 @@ private slots:
     void handleCaptureFailed(uint id);
 
     void handleReplyCheckUpdates(QNetworkReply* reply);
+#if (defined(Q_OS_MAC) || defined(Q_OS_MAC64) || defined(Q_OS_MACOS) ||        \
+     defined(Q_OS_MACX))
+    void screensChanged(QScreen* screen);
+#endif
 
 private:
     Controller();
