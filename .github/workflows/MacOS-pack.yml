@@ -23,7 +23,11 @@ jobs:
     runs-on: macos-10.15
 
     env:
+      APP_NAME: flameshot
+      DIR_BUILD: build
+      DIR_PKG: build/src
       HELPERS_SCRIPTS_PATH: ../../packaging/macos
+      TEMP_CI_CERT_FILENAME: temp_ci_appleDistribution.p12
       APPLE_DEV_IDENTITY: ${{ secrets.APPLE_DEV_IDENTITY }}
       APPLE_DEV_USER: ${{ secrets.APPLE_DEV_USER }}
       APPLE_DEV_PASS: ${{ secrets.APPLE_DEV_PASS }}
@@ -40,29 +44,87 @@ jobs:
 
       - name: Configure
         run: |
-          mkdir build
+          mkdir -p "${DIR_BUILD}"
           cd build
           rm -rf ./src/flameshot.dmg ./src/flameshot.app/
           cmake .. -DQt5_DIR=$(brew --prefix qt5)/lib/cmake/Qt5
 
       - name: Compile
         run: |
-          cd build
+          cd "${DIR_BUILD}"
           make
+
+      - name: Create key-chain and import certificate
+        run: |
+          mkdir -p "${DIR_PKG}"
+          cd "${DIR_PKG}"
+
+          # create keychain
+          security create-keychain -p "${APPLE_TEMP_CI_KEYCHAIN_PASS}" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "${APPLE_TEMP_CI_KEYCHAIN_PASS}" build.keychain
+
+          # import certificate
+          [ -r "${TEMP_CI_CERT_FILENAME}" ] && rm ${TEMP_CI_CERT_FILENAME}
+          echo "${APPLE_DEVELOPER_ID_APPLICATION_CERT_DATA}" | base64 --decode > "${TEMP_CI_CERT_FILENAME}"
+          security import "${TEMP_CI_CERT_FILENAME}" -P "${APPLE_DEVELOPER_ID_APPLICATION_CERT_PASS}" -k build.keychain -T /usr/bin/codesign
+          [ -r "${TEMP_CI_CERT_FILENAME}" ] && rm ${TEMP_CI_CERT_FILENAME}
+          security find-identity -v
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${APPLE_TEMP_CI_KEYCHAIN_PASS}" build.keychain
+
+      - name: Sign application
+        run: |
+          cd "${DIR_PKG}"
+          codesign --sign "${APPLE_DEV_IDENTITY}" --verbose --deep "${APP_NAME}.app"
 
       - name: Build dmg package
         run: |
-          cd build/src
-          echo "HELPERS_SCRIPTS_PATH: ${secrets.HELPERS_SCRIPTS_PATH}"
-          echo "HELPERS_SCRIPTS_PATH: ${env.HELPERS_SCRIPTS_PATH}"
-          ${{ HELPERS_SCRIPTS_PATH }}/qtappsign.sh flameshot
+          cd "${DIR_PKG}"
+          "$(brew --prefix qt5)/bin/macdeployqt" "${APP_NAME}.app" -dmg -sign-for-notarization="${APPLE_DEV_IDENTITY}"
+          # /usr/local/opt/qt5/bin/macdeployqt flameshot.app -dmg
 
-#          /usr/local/opt/qt5/bin/macdeployqt flameshot.app -dmg
+      #      - name: Update dmg package links
+      #        run: |
+      #          cd build/src
+      #          ../../packaging/macos/update_package.sh
 
-#      - name: Update dmg package links
-#        run: |
-#          cd build/src
-#          ../../packaging/macos/update_package.sh
+      - name: Notarize application
+        run: |
+          cd "${DIR_PKG}"
+          response=$(xcrun altool -t osx -f "${APP_NAME}.dmg" --primary-bundle-id "org.namecheap.${APP_NAME}" --notarize-app -u "${APPLE_DEV_USER}" -p "${APPLE_DEV_PASS}")
+          requestUUID=$(echo "${response}" | tr ' ' '\n' | tail -1)
+
+          while true; do
+            echo "--> Checking notarization status"
+            statusCheckResponse=$(xcrun altool --notarization-info "${requestUUID}" -u "${APPLE_DEV_USER}" -p "${APPLE_DEV_PASS}")
+
+            isSuccess=$(echo "${statusCheckResponse}" | grep "success")
+            isFailure=$(echo "${statusCheckResponse}" | grep "invalid")
+
+            if [[ "${isSuccess}" != "" ]]; then
+              echo "Notarization done!"
+              xcrun stapler staple "${APP_NAME}.dmg"
+              echo "Stapler done!"
+              break
+            fi
+            if [[ "${isFailure}" != "" ]]; then
+              echo "${statusCheckResponse}"
+              echo "Notarization failed"
+              exit 1
+            fi
+            echo "Notarization not finished yet, sleep 2m then check again..."
+            sleep 120
+          done
+
+      - name: Sign dmg package
+        run: |
+          cd "${DIR_PKG}"
+          codesign --sign "${APPLE_DEV_IDENTITY}" --verbose --deep "${APP_NAME}.dmg"
+
+      - name: Verify dmg package sign
+        run: |
+          cd "${DIR_PKG}"
+          codesign -dv --verbose=4 "${APP_NAME}.dmg"
 
       - name: Upload dmg package
         shell: bash
