@@ -31,7 +31,10 @@ GeneralConf::GeneralConf(QWidget* parent)
     initShowStartupLaunchMessage();
     initCopyAndCloseAfterUpload();
     initCopyPathAfterSave();
+#if not defined(Q_OS_MACOS)
+    // FIXME - temporary fix to disable option for MacOS
     initUseJpgForClipboard();
+#endif
     initSaveAfterCopy();
 
     // this has to be at the end
@@ -50,7 +53,8 @@ void GeneralConf::updateComponents()
       config.copyAndCloseAfterUploadEnabled());
     m_saveAfterCopy->setChecked(config.saveAfterCopyValue());
     m_copyPathAfterSave->setChecked(config.copyPathAfterSaveEnabled());
-    m_useJpgForClipboard->setChecked(config.useJpgForClipboard());
+    if (m_useJpgForClipboard)
+        m_useJpgForClipboard->setChecked(config.useJpgForClipboard());
 
     if (!config.savePath().isEmpty()) {
         m_savePath->setText(config.savePath());
