@@ -317,8 +317,9 @@ if (WIN32)
 
 
         STRING(REGEX REPLACE "\\\\" "/" OPENSSL_ROOT_DIR $ENV{OPENSSL_ROOT_DIR} )
- 
+
         if (ENABLE_OPENSSL)
+            message(OPENSSL_ROOT_DIR "***** $ENV{OPENSSL_ROOT_DIR} *****")
             if (EXISTS ${OPENSSL_ROOT_DIR}/bin)
 
              install(

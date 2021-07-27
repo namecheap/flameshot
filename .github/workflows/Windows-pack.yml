@@ -35,14 +35,6 @@ jobs:
         qt_target: [desktop]
         config:
           - {
-            arch: x86,
-            generator: "-G'Visual Studio 16 2019' -A Win32",
-            vcpkg_triplet: x86-windows,
-            qt_arch: win32_msvc2019,
-            qt_arch_install: msvc2019,
-            pak_arch: win32
-          }
-          - {
             arch: x64,
             generator: "-G'Visual Studio 16 2019' -A x64",
             vcpkg_triplet: x64-windows,
@@ -50,7 +42,7 @@ jobs:
             qt_arch_install: msvc2019_64,
             pak_arch: win64
           }
-        type: [portable, installer]
+        type: [portable]
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
@@ -80,15 +72,23 @@ jobs:
           # echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
           echo "VERSION=$(cat CMakeLists.txt |grep 'set.*(.*FLAMESHOT_VERSION' | sed 's/[^0-9.]*//' |sed 's/)//g')" >> $GITHUB_ENV
 
-      - name: Restore from cache and run vcpkg
-        uses: lukka/run-vcpkg@v4
-        with:
-          vcpkgArguments: ${{env.VCPKG_PACKAGES}}
-          vcpkgDirectory: '${{ github.workspace }}\vcpkg'
-          appendedCacheKey: ${{ matrix.config.vcpkg_triplet }}
-          vcpkgGitCommitId: ${{ env.VCPKG_VERSION }}
-          vcpkgTriplet: ${{ matrix.config.vcpkg_triplet }}
+      # It has issues at the moment, just taking previous binaries (uncomment after the fix)
+#      - name: Restore from cache and run vcpkg
+#        uses: lukka/run-vcpkg@v7
+#        with:
+#          vcpkgArguments: ${{env.VCPKG_PACKAGES}}
+#          vcpkgDirectory: '${{ github.workspace }}\vcpkg'
+#          appendedCacheKey: ${{ matrix.config.vcpkg_triplet }}
+#          vcpkgGitCommitId: ${{ env.VCPKG_VERSION }}
+#          vcpkgTriplet: ${{ matrix.config.vcpkg_triplet }}
 
+#      # lukka/run-vcpkg@v7 has issues at the moment, just taking previous binaries (comment after the fix)
+#      - name: Copy OpenSSL libraries 0
+#        working-directory: build
+#        shell: pwsh
+#        run: |
+#          Get-Location
+#
       - name: Cache Qt
         id: cache-qt
         uses: actions/cache@v1
@@ -106,15 +106,46 @@ jobs:
           modules: 'qtscript'
           cached: ${{ steps.cache-qt.outputs.cache-hit }}
 
+      # lukka/run-vcpkg@v7 has issues at the moment, just taking previous binaries (comment after the fix)
+      - name: Copy OpenSSL libraries ${{ matrix.config.arch }}
+        working-directory: build
+        shell: bash
+        run: |
+          pwd
+          mkdir -p ../vcpkg/installed/${{ matrix.config.arch }}-windows/bin/
+          cp ../packaging/win-installer/openssl/x64/* ../vcpkg/installed/${{ matrix.config.arch }}-windows/bin/
+          dir
+
+      - name: Copy OpenSSL libraries ${{ matrix.config.arch }} - TEST
+        working-directory: build
+        shell: pwsh
+        run: |
+          dir
+          cd ..
+          dir
+          cd vcpkg
+          dir
+          cd installed
+          dir
+          cd ${{ matrix.config.arch }}-windows
+          dir
+          cd bin
+          dir
+
       - name: Configure
         working-directory: build
         shell: pwsh
         run: |
           cmake ..  ${{matrix.config.generator}}  `
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"  `
-          -DENABLE_OPENSSL=ON `
           -DCMAKE_BUILD_TYPE=Release  `
+          -DENABLE_OPENSSL=ON `
           -DRUN_IN_PLACE=${{ contains(matrix.type, 'portable') }}
+#        run: |
+#          cmake ..  ${{matrix.config.generator}}  `
+#          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"  `
+#          -DENABLE_OPENSSL=ON `
+#          -DCMAKE_BUILD_TYPE=Release  `
+#          -DRUN_IN_PLACE=${{ contains(matrix.type, 'portable') }}
 
       - name: Compile
         working-directory: build
