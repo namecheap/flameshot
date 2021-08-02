@@ -11,7 +11,7 @@
 *.la
 *.lai
 *.so
-#*.dll
+*.dll
 *.dylib
 
 # Qt-es
@@ -41,6 +41,8 @@ Makefile*
 # QtCtreator CMake
 CMakeLists.txt.user
 
+# python
+venv/*
 
 # Created by https://www.gitignore.io/api/snapcraft
 
