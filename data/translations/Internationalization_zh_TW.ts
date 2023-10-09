@@ -1882,8 +1882,8 @@ Please solve them manually in the configuration file.</source>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="219"/>
-        <source>Print geometry of the selection in the format W H X Y. Does nothing if raw is specified</source>
-        <translation>以 W H X Y 格式列印選擇的幾何形狀。若指定了「原始」模式，則不進行任何動作</translation>
+        <source>Print geometry of the selection in the format WxH+X+Y. Does nothing if raw is specified</source>
+        <translation>以 WxH+X+Y 格式列印選擇的幾何形狀。若指定了「原始」模式，則不進行任何動作</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="223"/>
