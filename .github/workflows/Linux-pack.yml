@@ -181,7 +181,8 @@ jobs:
       - name: Artifact Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
@@ -282,7 +283,8 @@ jobs:
         if: matrix.dist.os == 'fedora'
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/build/
 
@@ -290,7 +292,8 @@ jobs:
         if: matrix.dist.os == 'opensuse-leap'
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm.sha256sum
@@ -422,7 +425,8 @@ jobs:
       - name: Artifact Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/Flameshot-*.x86_64.AppImage
             ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
@@ -488,7 +492,8 @@ jobs:
       - name: Artifact Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak
             ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
@@ -545,7 +550,8 @@ jobs:
       - name: Artifact Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Linux-distribution-artifact
+          #name: Linux-distribution-artifact
+          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
