@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+      - fix/*
+      - bugfix/*
     paths-ignore:
       - 'README.md'
       - 'LICENSE'
@@ -29,59 +31,23 @@ env:
 jobs:
   deb-pack:
     name: Build deb on ${{ matrix.dist.name }} ${{ matrix.dist.arch }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         dist:
           - {
-              name: debian-10,
-              os: debian,
-              symbol: buster,
-              arch: amd64
-            }
+            name: debian-12,
+            os: debian,
+            symbol: bookworm,
+            arch: amd64
+          }
           - {
-              name: debian-10,
-              os: debian,
-              symbol: buster,
-              arch: arm64
-            }
-          - {
-              name: debian-10,
-              os: debian,
-              symbol: buster,
-              arch: armhf
-            }
-          - {
-              name: debian-11,
-              os: debian,
-              symbol: bullseye,
-              arch: amd64
-            }
-          - {
-              name: debian-11,
-              os: debian,
-              symbol: bullseye,
-              arch: arm64
-            }
-          - {
-              name: debian-11,
-              os: debian,
-              symbol: bullseye,
-              arch: armhf
-            }
-          - {
-              name: ubuntu-20.04,
-              os: ubuntu,
-              symbol: focal,
-              arch: amd64
-            }
-          - {
-              name: ubuntu-22.04,
-              os: ubuntu,
-              symbol: jammy,
-              arch: amd64
-            }
+            name: ubuntu-22.04,
+            os: ubuntu,
+            symbol: jammy,
+            arch: amd64
+          }
           - {
             name: ubuntu-24.04,
             os: ubuntu,
@@ -189,6 +155,7 @@ jobs:
               ;;
             arm32*)
               QEMU_ARCH=arm
+              QEMU_ARCH=arm
               ;;
             arm64*)
               QEMU_ARCH=aarch64
@@ -228,23 +195,17 @@ jobs:
       matrix:
         dist:
           - {
-              name: fedora-35,
-              os: fedora,
-              symbol: 35,
-              arch: x86_64
-            }
+            name: fedora-41,
+            os: fedora,
+            symbol: 41,
+            arch: x86_64
+          }
           - {
-              name: fedora-36,
-              os: fedora,
-              symbol: 36,
-              arch: x86_64
-            }
-          - {
-              name: opensuse-leap-15.2,
-              os: opensuse-leap,
-              symbol: 15.2,
-              arch: x86_64
-            }
+            name: fedora-42,
+            os: fedora,
+            symbol: 42,
+            arch: x86_64
+          }
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
@@ -563,7 +524,7 @@ jobs:
       - name: Packaging snap
         uses: snapcore/action-build@v1
         id: snapcraft
-        with: 
+        with:
           snapcraft-args: --enable-experimental-extensions
       - name: Rename snap name
         shell: bash
