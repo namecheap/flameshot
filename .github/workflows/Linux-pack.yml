@@ -431,127 +431,127 @@ jobs:
 #            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage
 #            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
 
-  flatpak-pack:
-    name: Build flatpak on ubuntu-20.04
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source code
-        if: github.event_name == 'push'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: master
-      - name: Checkout Source code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set env & Print flameshot version
-        shell: bash
-        run: |
-          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
-          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
-          git_hash=$(git rev-parse --short HEAD)
-          echo "=======FLAMESHOT VERSION========"
-          echo ${last_committed_tag:1}
-          echo "Details: ${last_committed_tag}+git${git_revno}.${git_hash}"
-          echo "================================"
-          echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
-      - name: Setup flatpak
-        run: |
-          sudo apt-get -y -qq update
-          sudo apt-get install -y flatpak flatpak-builder
-      - name: Setup Flathub
-        run: |
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install -y --noninteractive flathub org.kde.Sdk//5.15 org.kde.Platform//5.15
-      - name: Packaging flatpak
-        run: |
-          BUNDLE="org.flameshot.Flameshot_${VERSION}_x86_64.flatpak"
-          MANIFEST_PATH=$GITHUB_WORKSPACE/packaging/flatpak/org.flameshot.Flameshot.yml
-          RUNTIME_REPO="https://flathub.org/repo/flathub.flatpakrepo"
-          APP_ID="org.flameshot.Flameshot"
-          BRANCH="master"
+#  flatpak-pack:
+#    name: Build flatpak on ubuntu-20.04
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout Source code
+#        if: github.event_name == 'push'
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#          ref: master
+#      - name: Checkout Source code
+#        if: github.event_name == 'pull_request'
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#          ref: ${{ github.event.pull_request.head.sha }}
+#      - name: Set env & Print flameshot version
+#        shell: bash
+#        run: |
+#          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
+#          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
+#          git_hash=$(git rev-parse --short HEAD)
+#          echo "=======FLAMESHOT VERSION========"
+#          echo ${last_committed_tag:1}
+#          echo "Details: ${last_committed_tag}+git${git_revno}.${git_hash}"
+#          echo "================================"
+#          echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
+#      - name: Setup flatpak
+#        run: |
+#          sudo apt-get -y -qq update
+#          sudo apt-get install -y flatpak flatpak-builder
+#      - name: Setup Flathub
+#        run: |
+#          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+#          flatpak install -y --noninteractive flathub org.kde.Sdk//5.15 org.kde.Platform//5.15
+#      - name: Packaging flatpak
+#        run: |
+#          BUNDLE="org.flameshot.Flameshot_${VERSION}_x86_64.flatpak"
+#          MANIFEST_PATH=$GITHUB_WORKSPACE/packaging/flatpak/org.flameshot.Flameshot.yml
+#          RUNTIME_REPO="https://flathub.org/repo/flathub.flatpakrepo"
+#          APP_ID="org.flameshot.Flameshot"
+#          BRANCH="master"
+#
+#          flatpak-builder --user --disable-rofiles-fuse --repo=repo --force-clean flatpak_app ${MANIFEST_PATH} --install-deps-from=flathub
+#          flatpak build-bundle repo ${BUNDLE} --runtime-repo=${RUNTIME_REPO} ${APP_ID} ${BRANCH}
+#          mv $GITHUB_WORKSPACE/org.flameshot.Flameshot_${VERSION}_x86_64.flatpak $GITHUB_WORKSPACE/org.flameshot.Flameshot-${VERSION}.x86_64.flatpak
+#      - name: SHA256Sum of flatpak package(daily build)
+#        run: |
+#          cd "$GITHUB_WORKSPACE/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/'!"; exit 11 ; }
+#          sha256sum org.flameshot.Flameshot-${VERSION}.x86_64.flatpak | tee org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum
+#          echo "================flatpak sha256sum download link===================="
+#          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum)
+#          echo "========no operation for you can see link in the log console======="
+#      - name: Upload flatpak package(daily build)
+#        run: |
+#          echo "=====================flatpak download link====================="
+#          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh $GITHUB_WORKSPACE/org.flameshot.Flameshot-${VERSION}.x86_64.flatpak)
+#          echo "======no operation for you can see link in the log console====="
+#      - name: Artifact Upload
+#        uses: actions/upload-artifact@v4
+#        with:
+#          #name: Linux-distribution-artifact
+#          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
+#          path: |
+#            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak
+#            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
 
-          flatpak-builder --user --disable-rofiles-fuse --repo=repo --force-clean flatpak_app ${MANIFEST_PATH} --install-deps-from=flathub
-          flatpak build-bundle repo ${BUNDLE} --runtime-repo=${RUNTIME_REPO} ${APP_ID} ${BRANCH}
-          mv $GITHUB_WORKSPACE/org.flameshot.Flameshot_${VERSION}_x86_64.flatpak $GITHUB_WORKSPACE/org.flameshot.Flameshot-${VERSION}.x86_64.flatpak
-      - name: SHA256Sum of flatpak package(daily build)
-        run: |
-          cd "$GITHUB_WORKSPACE/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/'!"; exit 11 ; }
-          sha256sum org.flameshot.Flameshot-${VERSION}.x86_64.flatpak | tee org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum
-          echo "================flatpak sha256sum download link===================="
-          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum)
-          echo "========no operation for you can see link in the log console======="
-      - name: Upload flatpak package(daily build)
-        run: |
-          echo "=====================flatpak download link====================="
-          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh $GITHUB_WORKSPACE/org.flameshot.Flameshot-${VERSION}.x86_64.flatpak)
-          echo "======no operation for you can see link in the log console====="
-      - name: Artifact Upload
-        uses: actions/upload-artifact@v4
-        with:
-          #name: Linux-distribution-artifact
-          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
-          path: |
-            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak
-            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
-
-  snap-pack:
-    name: Build snap on ubuntu-20.04
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source code
-        if: github.event_name == 'push'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: master
-      - name: Checkout Source code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set env & Print flameshot version
-        shell: bash
-        run: |
-          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
-          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
-          git_hash=$(git rev-parse --short HEAD)
-          echo "=======FLAMESHOT VERSION========"
-          echo ${last_committed_tag:1}
-          echo "Details: ${last_committed_tag}+git${git_revno}.${git_hash}"
-          echo "================================"
-          echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
-      - name: Packaging snap
-        uses: snapcore/action-build@v1
-        id: snapcraft
-        with:
-          snapcraft-args: --enable-experimental-extensions
-      - name: Rename snap name
-        shell: bash
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/build
-          cp ${{ steps.snapcraft.outputs.snap }} $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap
-      - name: SHA256Sum of snap package(daily build)
-        run: |
-          cd "$GITHUB_WORKSPACE/build/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/build/'!"; exit 11 ; }
-          sha256sum ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap | tee ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum
-          echo "================snap sha256sum download link=================="
-          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum)
-          echo "=====no operation for you can see link in the log console====="
-      - name: Upload snap package(daily build)
-        run: |
-          echo "=======================snap download link======================"
-          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap)
-          echo "======no operation for you can see link in the log console====="
-      - name: Artifact Upload
-        uses: actions/upload-artifact@v4
-        with:
-          #name: Linux-distribution-artifact
-          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
-          path: |
-            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
-            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
+#  snap-pack:
+#    name: Build snap on ubuntu-20.04
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout Source code
+#        if: github.event_name == 'push'
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#          ref: master
+#      - name: Checkout Source code
+#        if: github.event_name == 'pull_request'
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#          ref: ${{ github.event.pull_request.head.sha }}
+#      - name: Set env & Print flameshot version
+#        shell: bash
+#        run: |
+#          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
+#          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
+#          git_hash=$(git rev-parse --short HEAD)
+#          echo "=======FLAMESHOT VERSION========"
+#          echo ${last_committed_tag:1}
+#          echo "Details: ${last_committed_tag}+git${git_revno}.${git_hash}"
+#          echo "================================"
+#          echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
+#      - name: Packaging snap
+#        uses: snapcore/action-build@v1
+#        id: snapcraft
+#        with:
+#          snapcraft-args: --enable-experimental-extensions
+#      - name: Rename snap name
+#        shell: bash
+#        run: |
+#          mkdir -p $GITHUB_WORKSPACE/build
+#          cp ${{ steps.snapcraft.outputs.snap }} $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap
+#      - name: SHA256Sum of snap package(daily build)
+#        run: |
+#          cd "$GITHUB_WORKSPACE/build/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/build/'!"; exit 11 ; }
+#          sha256sum ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap | tee ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum
+#          echo "================snap sha256sum download link=================="
+#          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum)
+#          echo "=====no operation for you can see link in the log console====="
+#      - name: Upload snap package(daily build)
+#        run: |
+#          echo "=======================snap download link======================"
+#          echo $(sh $GITHUB_WORKSPACE/scripts/upload_services/${UPLOAD_SERVICE}.sh $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap)
+#          echo "======no operation for you can see link in the log console====="
+#      - name: Artifact Upload
+#        uses: actions/upload-artifact@v4
+#        with:
+#          #name: Linux-distribution-artifact
+#          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
+#          path: |
+#            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
+#            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
