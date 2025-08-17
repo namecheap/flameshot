@@ -50,9 +50,6 @@ private slots:
     void deleteCurrentImage();
     void saveScreenshotToFilesystem();
 
-protected:
-    void removeCacheFile(const QString& fullFileName);
-
 private:
     QPixmap m_pixmap;
 

@@ -12,6 +12,14 @@
 #include <QUrl>
 #include <QWidget>
 
+void removeCacheFile(QString const& fullFileName)
+{
+    QFile file(fullFileName);
+    if (file.exists()) {
+        file.remove();
+    }
+}
+
 UploadLineItem::UploadLineItem(QWidget* parent,
                                QPixmap const& preview,
                                QString const& timestamp,
@@ -26,15 +34,15 @@ UploadLineItem::UploadLineItem(QWidget* parent,
     ui->imagePreview->setPixmap(preview);
     ui->uploadTimestamp->setText(timestamp);
 
-    connect(ui->copyUrl, &QPushButton::clicked, this, [=]() {
+    connect(ui->copyUrl, &QPushButton::clicked, this, [=, this]() {
         FlameshotDaemon::copyToClipboard(url);
     });
 
-    connect(ui->openBrowser, &QPushButton::clicked, this, [=]() {
+    connect(ui->openBrowser, &QPushButton::clicked, this, [=, this]() {
         QDesktopServices::openUrl(QUrl(url));
     });
 
-    connect(ui->deleteImage, &QPushButton::clicked, this, [=]() {
+    connect(ui->deleteImage, &QPushButton::clicked, this, [=, this]() {
         if (ConfigHandler().historyConfirmationToDelete() &&
             QMessageBox::No ==
               QMessageBox::question(
@@ -50,6 +58,7 @@ UploadLineItem::UploadLineItem(QWidget* parent,
           ImgUploaderManager(this).uploader(unpackFileName.type);
         imgUploaderBase->deleteImage(unpackFileName.file, unpackFileName.token);
 
+        removeCacheFile(fullFileName);
         emit requestedDeletion();
     });
 }
