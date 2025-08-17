@@ -1,6 +1,20 @@
 name: test-clang-format
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'docs/**'
+      - 'data/translations/*.ts'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'docs/**'
+      - 'data/translations/*.ts'
+
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,13 +23,13 @@ jobs:
     steps:
     - name: Checkout Source code
       if: github.event_name == 'push'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Checkout Source code
       if: github.event_name == 'pull_request'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         ref: ${{ github.event.pull_request.head.sha }}
-    - uses: DoozyX/clang-format-lint-action@v0.9
+    - uses: DoozyX/clang-format-lint-action@v0.13
       with:
         source: './src'
         extensions: 'h,cpp'

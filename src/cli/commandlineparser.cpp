@@ -24,7 +24,7 @@ auto helpOption =
   CommandOption({ "h", "help" }, QStringLiteral("Displays this help"));
 
 QString optionsToString(const QList<CommandOption>& options,
-                        const QList<CommandArgument>& arguments)
+                        const QList<CommandArgument>& subcommands)
 {
     int size = 0; // track the largest size
     QStringList dashedOptionList;
@@ -42,10 +42,10 @@ QString optionsToString(const QList<CommandOption>& options,
         }
         dashedOptionList << joinedDashedOptions;
     }
-    // check the length of the arguments
-    for (auto const& arg : arguments) {
-        if (arg.name().length() > size) {
-            size = arg.name().length();
+    // check the length of the subcommands
+    for (auto const& subcommand : subcommands) {
+        if (subcommand.name().length() > size) {
+            size = subcommand.name().length();
         }
     }
     // generate the text
@@ -56,21 +56,21 @@ QString optionsToString(const QList<CommandOption>& options,
           QStringLiteral(" ").repeated(size + 4).prepend("\n");
         for (int i = 0; i < options.length(); ++i) {
             result += QStringLiteral("  %1  %2\n")
-                        .arg(dashedOptionList.at(i).leftJustified(size, ' '))
-                        .arg(options.at(i).description().replace(
-                          QLatin1String("\n"), linePadding));
+                        .arg(dashedOptionList.at(i).leftJustified(size, ' '),
+                             options.at(i).description().replace(
+                               QLatin1String("\n"), linePadding));
         }
-        if (!arguments.isEmpty()) {
+        if (!subcommands.isEmpty()) {
             result += QLatin1String("\n");
         }
     }
-    if (!arguments.isEmpty()) {
-        result += QObject::tr("Arguments") + ":\n";
+    if (!subcommands.isEmpty()) {
+        result += QObject::tr("Subcommands") + ":\n";
     }
-    for (const auto& argument : arguments) {
+    for (const auto& subcommand : subcommands) {
         result += QStringLiteral("  %1  %2\n")
-                    .arg(argument.name().leftJustified(size, ' '))
-                    .arg(argument.description());
+                    .arg(subcommand.name().leftJustified(size, ' '),
+                         subcommand.description());
     }
     return result;
 }
@@ -142,8 +142,7 @@ bool CommandLineParser::processOptions(const QStringList& args,
         }
         err << QStringLiteral("the option '%1' is not a valid option "
                               "for the argument '%2'.")
-                 .arg(arg)
-                 .arg(argName);
+                 .arg(arg, argName);
         ok = false;
         return ok;
     }
@@ -326,12 +325,10 @@ void CommandLineParser::printHelp(QStringList args, const Node* node)
         argName = qApp->applicationName();
     }
     QString argText =
-      node->subNodes.isEmpty() ? "" : "[" + QObject::tr("arguments") + "]";
+      node->subNodes.isEmpty() ? "" : "[" + QObject::tr("subcommands") + "]";
     helpText += (QObject::tr("Usage") + ": %1 [%2-" + QObject::tr("options") +
                  QStringLiteral("] %3\n\n"))
-                  .arg(args.join(QStringLiteral(" ")))
-                  .arg(argName)
-                  .arg(argText);
+                  .arg(args.join(QStringLiteral(" ")), argName, argText);
 
     // short section about default behavior
     helpText += QObject::tr("Per default runs Flameshot in the background and "
@@ -339,9 +336,9 @@ void CommandLineParser::printHelp(QStringList args, const Node* node)
     helpText += "\n\n";
 
     // add command options and subarguments
-    QList<CommandArgument> subArgs;
+    QList<CommandArgument> subcommands;
     for (const Node& n : node->subNodes) {
-        subArgs.append(n.argument);
+        subcommands.append(n.argument);
     }
     auto modifiedOptions = node->options;
     if (m_withHelp) {
@@ -350,7 +347,7 @@ void CommandLineParser::printHelp(QStringList args, const Node* node)
     if (m_withVersion && node == &m_parseTree) {
         modifiedOptions << versionOption;
     }
-    helpText += optionsToString(modifiedOptions, subArgs);
+    helpText += optionsToString(modifiedOptions, subcommands);
     // print it
     out << helpText;
 }

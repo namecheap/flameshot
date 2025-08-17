@@ -6,14 +6,12 @@ target_sources(flameshot PRIVATE copy/copytool.h copy/copytool.cpp)
 target_sources(flameshot PRIVATE exit/exittool.h exit/exittool.cpp)
 target_sources(flameshot PRIVATE sizeincrease/sizeincreasetool.h sizeincrease/sizeincreasetool.cpp)
 target_sources(flameshot PRIVATE sizedecrease/sizedecreasetool.h sizedecrease/sizedecreasetool.cpp)
+
+if (ENABLE_IMGUR)
 target_sources(
   flameshot
         PRIVATE imgupload/storages/imgur/imguruploader.h
         imgupload/storages/imgur/imguruploader.cpp
-        imgupload/storages/s3/imgs3uploader.h
-        imgupload/storages/s3/imgs3uploader.cpp
-        imgupload/storages/s3/imgs3settings.h
-        imgupload/storages/s3/imgs3settings.cpp
         imgupload/storages/imguploaderbase.h
         imgupload/storages/imguploaderbase.cpp
         imgupload/imguploadertool.h
@@ -21,6 +19,7 @@ target_sources(
         imgupload/imguploadermanager.h
         imgupload/imguploadermanager.cpp
 )
+endif()
 target_sources(
   flameshot
   PRIVATE launcher/applaunchertool.h

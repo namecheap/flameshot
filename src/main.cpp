@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
-#ifndef USE_EXTERNAL_SINGLEAPPLICATION
-#include "singleapplication.h"
-#else
-#include "QtSolutions/qtsingleapplication.h"
+#ifdef USE_KDSINGLEAPPLICATION
+#include <kdsingleapplication.h>
+#ifdef Q_OS_UNIX
+#include "core/signaldaemon.h"
+#include "csignal"
+#endif
 #endif
 
 #include "abstractlogger.h"
@@ -33,19 +35,35 @@
 #include <desktopinfo.h>
 #endif
 
-#ifdef Q_OS_LINUX
-// source: https://github.com/ksnip/ksnip/issues/416
-void wayland_hacks()
+// Required for saving button list QList<CaptureTool::Type>
+Q_DECLARE_METATYPE(QList<int>)
+
+#if defined(USE_KDSINGLEAPPLICATION) && defined(Q_OS_UNIX)
+static int setup_unix_signal_handlers()
 {
-    // Workaround to https://github.com/ksnip/ksnip/issues/416
-    DesktopInfo info;
-    if (info.windowManager() == DesktopInfo::GNOME) {
-        qputenv("QT_QPA_PLATFORM", "xcb");
-    }
+    struct sigaction sint, term;
+
+    sint.sa_handler = SignalDaemon::intSignalHandler;
+    sigemptyset(&sint.sa_mask);
+    sint.sa_flags = 0;
+    sint.sa_flags |= SA_RESTART;
+
+    if (sigaction(SIGINT, &sint, 0))
+        return 1;
+
+    term.sa_handler = SignalDaemon::termSignalHandler;
+    sigemptyset(&term.sa_mask);
+    term.sa_flags = 0;
+    term.sa_flags |= SA_RESTART;
+
+    if (sigaction(SIGTERM, &term, 0))
+        return 2;
+
+    return 0;
 }
 #endif
 
-void requestCaptureAndWait(const CaptureRequest& req)
+int requestCaptureAndWait(const CaptureRequest& req)
 {
     Flameshot* flameshot = Flameshot::instance();
     flameshot->requestCapture(req);
@@ -63,10 +81,15 @@ void requestCaptureAndWait(const CaptureRequest& req)
 #endif
     });
     QObject::connect(flameshot, &Flameshot::captureFailed, []() {
-        AbstractLogger::info() << "Screenshot aborted.";
+        AbstractLogger::Target logTarget = static_cast<AbstractLogger::Target>(
+          ConfigHandler().showAbortNotification()
+            ? AbstractLogger::Target::Default
+            : AbstractLogger::Target::Default &
+                ~AbstractLogger::Target::Notification);
+        AbstractLogger::info(logTarget) << "Screenshot aborted.";
         qApp->exit(1);
     });
-    qApp->exec();
+    return qApp->exec();
 }
 
 QSharedMemory* guiMutexLock()
@@ -85,51 +108,88 @@ QSharedMemory* guiMutexLock()
     return shm;
 }
 
+QTranslator translator, qtTranslator;
+
+void configureApp(bool gui)
+{
+    if (gui) {
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        QApplication::setStyle("Fusion"); // Supports dark scheme on Win 10/11
+#else
+        QApplication::setStyle(new StyleOverride);
+#endif
+    }
+
+    bool foundTranslation;
+    // Configure translations
+    for (const QString& path : PathInfo::translationsPaths()) {
+        foundTranslation =
+          translator.load(QLocale(),
+                          QStringLiteral("Internationalization"),
+                          QStringLiteral("_"),
+                          path);
+        if (foundTranslation) {
+            break;
+        }
+    }
+    if (!foundTranslation) {
+        QLocale l;
+        qWarning() << QStringLiteral("No Flameshot translation found for %1")
+                        .arg(l.uiLanguages().join(", "));
+    }
+
+    foundTranslation =
+      qtTranslator.load(QLocale::system(),
+                        "qt",
+                        "_",
+                        QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+    if (!foundTranslation) {
+        qWarning() << QStringLiteral("No Qt translation found for %1")
+                        .arg(QLocale::languageToString(
+                          QLocale::system().language()));
+    }
+
+    auto app = QCoreApplication::instance();
+    app->installTranslator(&translator);
+    app->installTranslator(&qtTranslator);
+    app->setAttribute(Qt::AA_DontCreateNativeWidgetSiblings, true);
+}
+
+// TODO find a way so we don't have to do this
+/// Recreate the application as a QApplication
+void reinitializeAsQApplication(int& argc, char* argv[])
+{
+    delete QCoreApplication::instance();
+    new QApplication(argc, argv);
+    configureApp(true);
+}
+
 int main(int argc, char* argv[])
 {
-#ifdef Q_OS_LINUX
-    wayland_hacks();
-#endif
+    // Required for saving button list QList<CaptureTool::Type>
+    qRegisterMetaType<QList<int>>();
 
-    // required for the button serialization
-    // TODO: change to QVector in v1.0
-    qRegisterMetaTypeStreamOperators<QList<int>>("QList<int>");
     QCoreApplication::setApplicationVersion(APP_VERSION);
     QCoreApplication::setApplicationName(QStringLiteral("flameshot"));
     QCoreApplication::setOrganizationName(QStringLiteral("flameshot"));
 
     // no arguments, just launch Flameshot
     if (argc == 1) {
-#ifndef USE_EXTERNAL_SINGLEAPPLICATION
-        SingleApplication app(argc, argv);
-#else
-        QtSingleApplication app(argc, argv);
+        QApplication app(argc, argv);
+
+#ifdef USE_KDSINGLEAPPLICATION
+#ifdef Q_OS_UNIX
+        setup_unix_signal_handlers();
+        auto signalDaemon = SignalDaemon();
 #endif
-        QApplication::setStyle(new StyleOverride);
+        auto kdsa = KDSingleApplication(QStringLiteral("flameshot"));
 
-        QTranslator translator, qtTranslator;
-        QStringList trPaths = PathInfo::translationsPaths();
-
-        for (const QString& path : trPaths) {
-            bool match = translator.load(QLocale(),
-                                         QStringLiteral("Internationalization"),
-                                         QStringLiteral("_"),
-                                         path);
-            if (match) {
-                break;
-            }
+        if (!kdsa.isPrimaryInstance()) {
+            return 0; // Quit
         }
+#endif
 
-        qtTranslator.load(
-          QLocale::system(),
-          "qt",
-          "_",
-          QLibraryInfo::location(QLibraryInfo::TranslationsPath));
-
-        qApp->installTranslator(&translator);
-        qApp->installTranslator(&qtTranslator);
-        qApp->setAttribute(Qt::AA_DontCreateNativeWidgetSiblings, true);
-
+        configureApp(true);
         auto c = Flameshot::instance();
         FlameshotDaemon::start();
 
@@ -146,19 +206,20 @@ int main(int argc, char* argv[])
         return qApp->exec();
     }
 
-#if !defined(Q_OS_WIN)
     /*--------------|
      * CLI parsing  |
      * ------------*/
     new QCoreApplication(argc, argv);
+    configureApp(false);
     CommandLineParser parser;
     // Add description
     parser.setDescription(
       QObject::tr("Powerful yet simple to use screenshot software."));
     parser.setGeneralErrorMessage(QObject::tr("See") + " flameshot --help.");
     // Arguments
-    CommandArgument fullArgument(QStringLiteral("full"),
-                                 QObject::tr("Capture the entire desktop."));
+    CommandArgument fullArgument(
+      QStringLiteral("full"),
+      QObject::tr("Capture screenshot of all monitors at the same time."));
     CommandArgument launcherArgument(QStringLiteral("launcher"),
                                      QObject::tr("Open the capture launcher."));
     CommandArgument guiArgument(
@@ -166,8 +227,9 @@ int main(int argc, char* argv[])
       QObject::tr("Start a manual capture in GUI mode."));
     CommandArgument configArgument(QStringLiteral("config"),
                                    QObject::tr("Configure") + " flameshot.");
-    CommandArgument screenArgument(QStringLiteral("screen"),
-                                   QObject::tr("Capture a single screen."));
+    CommandArgument screenArgument(
+      QStringLiteral("screen"),
+      QObject::tr("Capture a screenshot of the specified monitor."));
 
     // Options
     CommandOption pathOption(
@@ -203,6 +265,10 @@ int main(int argc, char* argv[])
     CommandOption autostartOption(
       { "a", "autostart" },
       QObject::tr("Enable or disable run at startup"),
+      QStringLiteral("bool"));
+    CommandOption notificationOption(
+      { "n", "notifications" },
+      QObject::tr("Enable or disable the notifications"),
       QStringLiteral("bool"));
     CommandOption checkOption(
       "check", QObject::tr("Check the configuration for errors"));
@@ -288,6 +354,7 @@ int main(int argc, char* argv[])
     pathOption.addChecker(pathChecker, pathErr);
     trayOption.addChecker(booleanChecker, booleanErr);
     autostartOption.addChecker(booleanChecker, booleanErr);
+    notificationOption.addChecker(booleanChecker, booleanErr);
     showHelpOption.addChecker(booleanChecker, booleanErr);
     screenNumberOption.addChecker(numericChecker, numberErr);
 
@@ -327,6 +394,7 @@ int main(int argc, char* argv[])
                         uploadOption },
                       fullArgument);
     parser.AddOptions({ autostartOption,
+                        notificationOption,
                         filenameOption,
                         trayOption,
                         showHelpOption,
@@ -344,14 +412,12 @@ int main(int argc, char* argv[])
     Flameshot::setOrigin(Flameshot::CLI);
     if (parser.isSet(helpOption) || parser.isSet(versionOption)) {
     } else if (parser.isSet(launcherArgument)) { // LAUNCHER
-        delete qApp;
-        new QApplication(argc, argv);
+        reinitializeAsQApplication(argc, argv);
         Flameshot* flameshot = Flameshot::instance();
         flameshot->launcher();
         qApp->exec();
     } else if (parser.isSet(guiArgument)) { // GUI
-        delete qApp;
-        new QApplication(argc, argv);
+        reinitializeAsQApplication(argc, argv);
         // Prevent multiple instances of 'flameshot gui' from running if not
         // configured to do so.
         if (!ConfigHandler().allowMultipleGuiInstances()) {
@@ -412,12 +478,9 @@ int main(int argc, char* argv[])
                 req.addSaveTask();
             }
         }
-        requestCaptureAndWait(req);
+        return requestCaptureAndWait(req);
     } else if (parser.isSet(fullArgument)) { // FULL
-        // Recreate the application as a QApplication
-        // TODO find a way so we don't have to do this
-        delete qApp;
-        new QApplication(argc, argv);
+        reinitializeAsQApplication(argc, argv);
 
         // Option values
         QString path = parser.value(pathOption);
@@ -450,12 +513,9 @@ int main(int argc, char* argv[])
         if (!clipboard && path.isEmpty() && !raw && !upload) {
             req.addSaveTask();
         }
-        requestCaptureAndWait(req);
+        return requestCaptureAndWait(req);
     } else if (parser.isSet(screenArgument)) { // SCREEN
-        // Recreate the application as a QApplication
-        // TODO find a way so we don't have to do this
-        delete qApp;
-        new QApplication(argc, argv);
+        reinitializeAsQApplication(argc, argv);
 
         QString numberStr = parser.value(screenNumberOption);
         // Option values
@@ -503,16 +563,17 @@ int main(int argc, char* argv[])
             req.addSaveTask();
         }
 
-        requestCaptureAndWait(req);
+        return requestCaptureAndWait(req);
     } else if (parser.isSet(configArgument)) { // CONFIG
         bool autostart = parser.isSet(autostartOption);
+        bool notification = parser.isSet(notificationOption);
         bool filename = parser.isSet(filenameOption);
         bool tray = parser.isSet(trayOption);
         bool mainColor = parser.isSet(mainColorOption);
         bool contrastColor = parser.isSet(contrastColorOption);
         bool check = parser.isSet(checkOption);
-        bool someFlagSet =
-          (filename || tray || mainColor || contrastColor || check);
+        bool someFlagSet = (autostart || notification || filename || tray ||
+                            mainColor || contrastColor || check);
         if (check) {
             AbstractLogger err = AbstractLogger::error(AbstractLogger::Stderr);
             bool ok = ConfigHandler().checkForErrors(&err);
@@ -526,8 +587,7 @@ int main(int argc, char* argv[])
         }
         if (!someFlagSet) {
             // Open gui when no options are given
-            delete qApp;
-            new QApplication(argc, argv);
+            reinitializeAsQApplication(argc, argv);
             QObject::connect(
               qApp, &QApplication::lastWindowClosed, qApp, &QApplication::quit);
             Flameshot::instance()->config();
@@ -539,6 +599,10 @@ int main(int argc, char* argv[])
                 config.setStartupLaunch(parser.value(autostartOption) ==
                                         "true");
             }
+            if (notification) {
+                config.setShowDesktopNotification(
+                  parser.value(notificationOption) == "true");
+            }
             if (filename) {
                 QString newFilename(parser.value(filenameOption));
                 config.setFilenamePattern(newFilename);
@@ -546,8 +610,7 @@ int main(int argc, char* argv[])
                 QTextStream(stdout)
                   << QStringLiteral("The new pattern is '%1'\n"
                                     "Parsed pattern example: %2\n")
-                       .arg(newFilename)
-                       .arg(fh.parsedPattern());
+                       .arg(newFilename, fh.parsedPattern());
             }
             if (tray) {
                 config.setDisabledTrayIcon(parser.value(trayOption) == "false");
@@ -567,6 +630,5 @@ int main(int argc, char* argv[])
     }
 finish:
 
-#endif
     return 0;
 }
