@@ -27,6 +27,8 @@ env:
   DOCKER_REPO: quay.io/flameshot-org/ci-building
   # building tool: https://github.com/flameshot-org/packpack
   PACKPACK_REPO: flameshot-org/packpack
+  ENABLE_IMGUR: ${{ vars.ENABLE_IMGUR || 'OFF' }}
+  DISABLE_UPDATE_CHECKER: ${{ vars.DISABLE_UPDATE_CHECKER || 'OFF' }}
 
 jobs:
   deb-pack:

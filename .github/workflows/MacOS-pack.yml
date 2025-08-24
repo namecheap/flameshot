@@ -20,6 +20,8 @@ on:
 
 env:
   PRODUCT: flameshot
+  ENABLE_IMGUR: ${{ vars.ENABLE_IMGUR || 'OFF' }}
+  DISABLE_UPDATE_CHECKER: ${{ vars.DISABLE_UPDATE_CHECKER || 'OFF' }}
 
 jobs:
   dmg-pack:
