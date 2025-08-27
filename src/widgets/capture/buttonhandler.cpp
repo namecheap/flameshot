@@ -315,7 +315,7 @@ void ButtonHandler::positionButtonsInside(int index)
 void ButtonHandler::ensureSelectionMinimunSize()
 {
     // Detect if a side is smaller than a button in order to prevent collision
-    // and redimension the base area the the base size of a single button per
+    // and redimension the base area the base size of a single button per
     // side
     if (m_selection.width() < m_buttonBaseSize) {
         if (!m_blockedLeft) {
