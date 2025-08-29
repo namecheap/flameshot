@@ -2,7 +2,7 @@
 # spec file for package flameshot on fedora, rhel
 #
 Name:    flameshot
-Version: 13.1.0.1
+Version: 13.1.0.2
 Release: 2%{?dist}
 License: GPLv3+ and ASL 2.0 and GPLv2 and LGPLv3 and Free Art
 Summary: Powerful yet simple to use screenshot software
