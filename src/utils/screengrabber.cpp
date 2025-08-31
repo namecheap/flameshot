@@ -24,6 +24,9 @@
 #include <QUuid>
 #endif
 
+// TODO: This should be removed after the complete switch to the DesktopCapture
+// It is still used (but does not properly work) for non-fullscreen captures
+
 ScreenGrabber::ScreenGrabber(QObject* parent)
   : QObject(parent)
 {}
