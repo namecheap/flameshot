@@ -227,10 +227,10 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok)
                                 geometry.width(),
                                 geometry.height());
 
-    QString downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    QString downloadsPath =
+      QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
     QString filePath = downloadsPath + "/screenshot.png";
     desktop.save(filePath, "PNG");
-
 
     return desktop;
 #endif
@@ -282,9 +282,10 @@ QRect ScreenGrabber::desktopGeometry()
 
     qreal dpr = 1.0;
 #ifdef Q_OS_WIN
-    QScreen *primaryScreen = QGuiApplication::primaryScreen();
+    QScreen* primaryScreen = QGuiApplication::primaryScreen();
     dpr = primaryScreen->devicePixelRatio();
-    qWarning() << "ScreenGrabber::desktopGeometry() - (primaryScreen) dpr =" << dpr;
+    qWarning() << "ScreenGrabber::desktopGeometry() - (primaryScreen) dpr ="
+               << dpr;
 #endif
 
     for (QScreen* const screen : QGuiApplication::screens()) {
@@ -299,7 +300,8 @@ QRect ScreenGrabber::desktopGeometry()
 #endif
 
         scrRect.moveTo(QPointF(scrRect.x() / dpr, scrRect.y() / dpr).toPoint());
-        qWarning() << "ScreenGrabber::desktopGeometry() - scrRect (scaled = "<< dpr << ") =" << scrRect;
+        qWarning() << "ScreenGrabber::desktopGeometry() - scrRect (scaled = "
+                   << dpr << ") =" << scrRect;
         geometry = geometry.united(scrRect);
     }
     qWarning() << "ScreenGrabber::desktopGeometry() - geometry =" << geometry;
