@@ -89,6 +89,7 @@ QPixmap DesktopCapturer::captureDesktopComposite()
     // Draw composite screenshot
     QPainter painter(&desktop);
     for (QScreen* screen : QGuiApplication::screens()) {
+        qWarning() << "screen" << screen;
         QRect geo = screen->geometry();
         QPixmap pix = screen->grabWindow(0);
 
@@ -98,8 +99,10 @@ QPixmap DesktopCapturer::captureDesktopComposite()
 
         // Calculate the offset of the current screen
         // from the top left corner of the composite screen
+        qWarning() << "geo 1:" << geo;
         geo.setX(geo.x() - topLeft().x());
         geo.setY(geo.y() - topLeft().y());
+        qWarning() << "geo 1:" << geo;
 
         painter.drawPixmap(geo.x(), geo.y(), pix);
 
@@ -108,6 +111,7 @@ QPixmap DesktopCapturer::captureDesktopComposite()
         QRect areaRect = geo;
         areaRect.moveLeft(geo.x() / screen->devicePixelRatio());
         areaRect.moveTop(geo.y() / screen->devicePixelRatio());
+        qWarning() << "areaRect" << areaRect;
         m_areas.append(areaRect);
     }
     painter.end();
