@@ -257,12 +257,11 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
 
     // Qt6 has only sizes in logical values, position is in physical values.
     // Move Help message to the logical pixel with devicePixelRatio.
-    QScreen *screenAtCursorPos = m_desktopCapturer.screenAtCursorPos();
+    QScreen* screenAtCursorPos = m_desktopCapturer.screenAtCursorPos();
     qreal screenAtCursorPosDpr = screenAtCursorPos->devicePixelRatio();
     QRect screenToDrawGeometry = m_desktopCapturer.screenToDraw()->geometry();
-    screenToDrawGeometry.moveTo(
-        screenAtCursorPos->geometry().topLeft() / screenAtCursorPosDpr);
-
+    screenToDrawGeometry.moveTo(screenAtCursorPos->geometry().topLeft() /
+                                screenAtCursorPosDpr);
     OverlayMessage::init(this, screenToDrawGeometry);
 
     if (m_config.showHelp()) {
@@ -1148,7 +1147,7 @@ void CaptureWidget::initPanel()
 #endif
     }
 
-    QScreen *screenAtCursorPos = m_desktopCapturer.screenAtCursorPos();
+    QScreen* screenAtCursorPos = m_desktopCapturer.screenAtCursorPos();
     qreal screenAtCursorPosDpr = screenAtCursorPos->devicePixelRatio();
     QRect screenToDrawGeometry = m_desktopCapturer.screenToDraw()->geometry();
     screenToDrawGeometry.moveTo(screenAtCursorPos->geometry().topLeft());
@@ -1167,10 +1166,10 @@ void CaptureWidget::initPanel()
             static_cast<int>(panelToggleButton->width() / 2));
 #else
         panelToggleButton->move(
-            static_cast<int>(screenToDrawGeometry.x() / screenAtCursorPosDpr),
-            static_cast<int>(screenToDrawGeometry.y() / screenAtCursorPosDpr +
-                (screenToDrawGeometry.height() / 2 - panelToggleButton->width() / 2)));
-
+          static_cast<int>(screenToDrawGeometry.x() / screenAtCursorPosDpr),
+          static_cast<int>(screenToDrawGeometry.y() / screenAtCursorPosDpr +
+                           (screenToDrawGeometry.height() / 2 -
+                            panelToggleButton->width() / 2)));
 #endif
         panelToggleButton->setCursor(Qt::ArrowCursor);
         (new DraggableWidgetMaker(this))->makeDraggable(panelToggleButton);
@@ -1189,14 +1188,13 @@ void CaptureWidget::initPanel()
     m_panel->setFixedWidth(static_cast<int>(m_colorPicker->width() * 1.5));
     m_panel->setFixedHeight(currentScreen->geometry().height());
 #else
-    // QRect screenToDrawGeometry = m_desktopCapturer.screenToDraw()->geometry();
     panelRect.setHeight(screenToDrawGeometry.height());
     panelRect.moveTo(mapFromGlobal(screenToDrawGeometry.topLeft()));
     panelRect.setWidth(m_colorPicker->width() * 1.5);
     m_panel->setGeometry(panelRect);
     m_panel->move(
-        static_cast<int>(screenToDrawGeometry.x() / screenAtCursorPosDpr),
-        static_cast<int>(screenToDrawGeometry.y() / screenAtCursorPosDpr));
+      static_cast<int>(screenToDrawGeometry.x() / screenAtCursorPosDpr),
+      static_cast<int>(screenToDrawGeometry.y() / screenAtCursorPosDpr));
 
 #endif
     connect(m_panel,
