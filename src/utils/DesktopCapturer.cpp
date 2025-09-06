@@ -196,7 +196,8 @@ QScreen* DesktopCapturer::primaryScreen()
 #if (defined(Q_OS_LINUX) || defined(Q_OS_UNIX))
     // At least in Gnome+XOrg, the last screen is actually the first screen
     // and all calculations are started from it, not from the PrimaryScreen.
-    return QGuiApplication::screens().last();
+    // return QGuiApplication::screens().last();
+    return QGuiApplication::primaryScreen();
 #else
     return QGuiApplication::primaryScreen();
 #endif

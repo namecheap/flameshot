@@ -157,20 +157,22 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
             qWarning()
               << "m_desktopCapturer.screenToDraw()->geometry().topLeft()"
               << m_desktopCapturer.screenToDraw()->geometry().topLeft();
-            qWarning() << "m_desktopCapturer.screenToDraw()->devicePixelRatio()"
-                       << m_desktopCapturer.screenToDraw()->devicePixelRatio();
-            QScreen* screen = m_desktopCapturer.screenToDraw();
+            QScreen* screenToDraw = m_desktopCapturer.screenToDraw();
             QScreen* screenPrimary = QGuiApplication::primaryScreen();
             QScreen* screen1 = QGuiApplication::screens()[0];
             QScreen* screen2 = QGuiApplication::screens()[1];
             if (screen1) {
-                qWarning() << "screen1" << screen1->geometry().topLeft();
+                qWarning() << "screen1" << screen1->name() << screen1->geometry();
             }
             if (screen2) {
-                qWarning() << "screen2" << screen2->geometry().topLeft();
+                qWarning() << "screen2" << screen2->name() << screen2->geometry();
             }
             qWarning() << "screenPrimary"
-                       << screenPrimary->geometry().topLeft();
+                       <<  screenPrimary->name() << screenPrimary->geometry();
+            qWarning() << "screenToDraw"
+                       <<  screenToDraw->name() << screenToDraw->geometry();
+            QScreen* screen = screenToDraw;
+            // QScreen* screen = screen2;
             move(screen->geometry().topLeft() / screen->devicePixelRatio());
             // #endif
         }
