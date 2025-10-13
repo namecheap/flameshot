@@ -7,9 +7,17 @@ find_package(
         Widgets
         Network
         Svg
-        DBus
         LinguistTools
 )
+
+if (UNIX AND NOT APPLE)
+find_package(
+        Qt${QT_VERSION_MAJOR}
+        CONFIG
+        REQUIRED
+        DBus
+)
+endif()
 
 if (USE_WAYLAND_CLIPBOARD)
     find_package(KF6GuiAddons)
@@ -110,14 +118,17 @@ set(FLAMESHOT_TS_FILES
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_bg.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_ca.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_cs.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_da.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_de_DE.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_el.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_en.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_es.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_et.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_eu.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_fa.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_fi.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_fr.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_ga.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_gl.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_grc.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_he.ts
@@ -130,12 +141,17 @@ set(FLAMESHOT_TS_FILES
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_nb_NO.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_nl_NL.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_nl.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_pt.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_pl.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_pt_BR.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_ro.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_ru.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_sk.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_sr_SP.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_sv_SE.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_sw.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_ta.ts
+      ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_th.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_tr.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_uk.ts
       ${CMAKE_SOURCE_DIR}/data/translations/Internationalization_vi.ts
@@ -208,11 +224,16 @@ target_link_libraries(
         project_warnings
         project_options
         Qt${QT_VERSION_MAJOR}::Svg
-        Qt${QT_VERSION_MAJOR}::DBus
         Qt${QT_VERSION_MAJOR}::Network
         Qt${QT_VERSION_MAJOR}::Widgets
         QtColorWidgets
 )
+if (UNIX AND NOT APPLE)
+target_link_libraries(
+        flameshot
+        Qt${QT_VERSION_MAJOR}::DBus
+)
+endif()
 
 if (USE_KDSINGLEAPPLICATION)
   message(STATUS "KDSingleApplication is used!")
@@ -286,8 +307,13 @@ endif()
 message("Flameshot predefined color palette large: " ${FLAMESHOT_PREDEFINED_COLOR_PALETTE_LARGE})
 target_compile_definitions(flameshot PRIVATE PREDEFINED_COLOR_PALETTE_LARGE=${FLAMESHOT_PREDEFINED_COLOR_PALETTE_LARGE})
 
+
 find_package (Git)
-if (GIT_FOUND)
+if( DEFINED ENV{GIT_HASH})
+    message("Using provided git_commit_hash: $ENV{GIT_HASH}")
+    set(FLAMESHOT_GIT_HASH $ENV{GIT_HASH})
+    target_compile_definitions(flameshot PRIVATE FLAMESHOT_GIT_HASH="${FLAMESHOT_GIT_HASH}")
+elseif (GIT_FOUND)
     message("git found: ${GIT_EXECUTABLE} in version     ${GIT_VERSION_STRING}")
     execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD OUTPUT_VARIABLE FLAMESHOT_GIT_HASH)
     string(REGEX REPLACE "\r*\n$" "" FLAMESHOT_GIT_HASH "${FLAMESHOT_GIT_HASH}")
@@ -295,8 +321,9 @@ if (GIT_FOUND)
     message("FLAMESHOT_GIT_HASH: ${FLAMESHOT_GIT_HASH}")
 else()
     target_compile_definitions(flameshot PRIVATE FLAMESHOT_GIT_HASH="-")
-    message("git command is not found")
+    message(WARNING "Compiling without git commit hash")
 endif ()
+
 target_compile_definitions(flameshot PRIVATE APP_PREFIX="${CMAKE_INSTALL_PREFIX}")
 target_compile_definitions(flameshot PRIVATE APP_VERSION="v${PROJECT_VERSION}")
 #target_compile_definitions(flameshot PRIVATE QAPPLICATION_CLASS=QApplication)

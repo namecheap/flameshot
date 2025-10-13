@@ -2,7 +2,7 @@
 # spec file for package flameshot on opensuse leap 15.x
 #
 Name:    flameshot
-Version: 13.1.0
+Version: 13.1.0.5
 Release: 2
 License: GPLv3+ and ASL 2.0 and GPLv2 and LGPLv3 and Free Art
 Summary: Powerful yet simple to use screenshot software

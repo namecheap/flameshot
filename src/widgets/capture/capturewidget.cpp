@@ -831,8 +831,7 @@ int CaptureWidget::selectToolItemAtPos(const QPoint& pos)
 
 void CaptureWidget::leaveEvent(QEvent* event)
 {
-    if (!m_desktopCapturer.isComposite() &&
-        m_selection->geometry().size() == QSize(0, 0)) {
+    if (!m_desktopCapturer.isComposite() && !m_selection->isVisible()) {
         QTimer::singleShot(50, this, [this]() { moveToActiveScreen(); });
     }
     QWidget::leaveEvent(event);
@@ -998,6 +997,7 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
             m_context.color.isValid()) {
             pushObjectsStateToUndoStack();
         }
+        m_colorPicker->setNewColor();
         m_colorPicker->hide();
         if (!m_context.color.isValid()) {
             m_context.color = ConfigHandler().drawColor();
