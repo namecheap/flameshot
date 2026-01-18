@@ -20,8 +20,6 @@ on:
 
 env:
   PRODUCT: flameshot
-  ENABLE_IMGUR: ${{ vars.ENABLE_IMGUR || 'OFF' }}
-  DISABLE_UPDATE_CHECKER: ${{ vars.DISABLE_UPDATE_CHECKER || 'OFF' }}
 
 jobs:
   dmg-pack:
@@ -31,13 +29,13 @@ jobs:
       matrix:
         dist:
           - {
-              os: macos-14,
-              arch: arm64
-            }
+            os: macos-15,
+            arch: arm64
+          }
           - {
-              os: macos-13,
-              arch: intel
-            }
+            os: macos-15,
+            arch: intel
+          }
     runs-on: ${{ matrix.dist.os }}
     env:
       APP_NAME: flameshot
@@ -77,7 +75,7 @@ jobs:
           echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
 
       - name: Install Qt
-        run: brew install qt@6 cmake
+        run: brew install qt@6
 
       - name: Configure
         run: |
