@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 # cmake_policy(SET CMP0076 OLD)
 
-set(FLAMESHOT_VERSION 14.0.0)
+set(FLAMESHOT_VERSION 14.0.0.1)
 
-# Flameshot-org
-set(GIT_API_URL "https://api.github.com/repos/flameshot-org/flameshot/releases/latest")
+# Namecheap fork
+set(GIT_API_URL "https://api.github.com/repos/namecheap/flameshot/releases/latest")
 
 project(
   flameshot
@@ -84,7 +84,7 @@ option(USE_BUNDLED_KDSINGLEAPPLICATION "Use a bundled version of the KDSingleApp
 option(USE_LAUNCHER_ABSOLUTE_PATH "Use absolute path for the desktop launcher" ON)
 option(USE_WAYLAND_CLIPBOARD "USE KF Gui Wayland Clipboard" OFF)
 option(DISABLE_UPDATE_CHECKER "Disable check for updates" OFF)
-option(ENABLE_IMGUR "Enable Imgur Uploader" OFF)
+option(ENABLE_IMGUR "Enable Image Uploader (Imgur/S3)" ON)
 
 if(ENABLE_IMGUR)
   add_compile_definitions(ENABLE_IMGUR)

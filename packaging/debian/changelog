@@ -1,3 +1,10 @@
+flameshot (14.0.0.1-1) unstable; urgency=medium
+
+  * Namecheap edition: S3 upload storage on top of upstream 14.0.0
+
+ -- Yurii Puchkov <panpuchkov@gmail.com>  Wed, 26 Aug 2026 23:00:00 -0600
+
+
 flameshot (14.0.rc3-1) unstable; urgency=medium
 
   * Release for v14.0.0

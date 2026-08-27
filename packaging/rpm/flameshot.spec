@@ -1,12 +1,12 @@
 Name:    flameshot
-Version: 14.0.0
+Version: 14.0.0.1
 Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
 
 License: GPL-3.0-or-later
-URL:     https://github.com/flameshot-org/flameshot
+URL:     https://github.com/namecheap/flameshot
 Source0: %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
-Vendor:  Flameshot
+Vendor:  Namecheap
 
 BuildRequires: git
 BuildRequires: cmake
@@ -144,6 +144,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Wed Aug 26 2026 Yurii Puchkov <panpuchkov@gmail.com> - 14.0.0.1
+- Namecheap edition: S3 upload storage on top of upstream 14.0.0
+
 * Mon May 18 2026 Jeremy Borgman <borgman.jeremy@pm.me> - 14.0.rc2
 - Beta for 14 release
 

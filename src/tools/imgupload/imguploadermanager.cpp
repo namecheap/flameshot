@@ -6,6 +6,8 @@
 // TODO - remove this hard-code and create plugin manager in the future, you may
 // include other storage headers here
 #include "tools/imgupload/storages/imgur/imguruploader.h"
+#include "tools/imgupload/storages/s3/imgs3settings.h"
+#include "tools/imgupload/storages/s3/imgs3uploader.h"
 
 #include <QPixmap>
 #include <QWidget>
@@ -21,31 +23,27 @@ ImgUploaderManager::ImgUploaderManager(QObject* parent)
 
 void ImgUploaderManager::init()
 {
-    // TODO - implement ImgUploader for other Storages and selection among them,
-    // example:
-    // if (uploaderPlugin().compare("s3") == 0) {
-    //    m_qstrUrl = ImgS3Settings().value("S3", "S3_URL").toString();
-    //} else {
-    //    m_qstrUrl = "https://imgur.com/";
-    //    m_imgUploaderPlugin = "imgur";
-    //}
-    m_urlString = "https://imgur.com/";
-    m_imgUploaderPlugin = "imgur";
+    // TODO - implement ImgUploader for other Storages and selection among them
+    if (uploaderPlugin().compare("s3") == 0) {
+        m_urlString = ImgS3Settings().value("S3", "S3_URL").toString();
+        m_imgUploaderPlugin = "s3";
+    } else {
+        m_urlString = "https://imgur.com/";
+        m_imgUploaderPlugin = "imgur";
+    }
 }
 
 ImgUploaderBase* ImgUploaderManager::uploader(const QPixmap& capture,
                                               QWidget* parent)
 {
-    // TODO - implement ImgUploader for other Storages and selection among them,
-    // example:
-    // if (uploaderPlugin().compare("s3") == 0) {
-    //    m_imgUploaderBase =
-    //      (ImgUploaderBase*)(new ImgS3Uploader(capture, parent));
-    //} else {
-    //    m_imgUploaderBase =
-    //      (ImgUploaderBase*)(new ImgurUploader(capture, parent));
-    //}
-    m_imgUploaderBase = (ImgUploaderBase*)(new ImgurUploader(capture, parent));
+    // TODO - implement ImgUploader for other Storages and selection among them
+    if (uploaderPlugin().compare("s3") == 0) {
+        m_imgUploaderBase =
+          (ImgUploaderBase*)(new ImgS3Uploader(capture, parent));
+    } else {
+        m_imgUploaderBase =
+          (ImgUploaderBase*)(new ImgurUploader(capture, parent));
+    }
     if (m_imgUploaderBase && !capture.isNull()) {
         m_imgUploaderBase->upload();
     }
