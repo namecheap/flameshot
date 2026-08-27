@@ -18,6 +18,10 @@ target_sources(
         imgupload/imguploadertool.cpp
         imgupload/imguploadermanager.h
         imgupload/imguploadermanager.cpp
+        imgupload/storages/s3/imgs3uploader.h
+        imgupload/storages/s3/imgs3uploader.cpp
+        imgupload/storages/s3/imgs3settings.h
+        imgupload/storages/s3/imgs3settings.cpp
 )
 endif()
 target_sources(
