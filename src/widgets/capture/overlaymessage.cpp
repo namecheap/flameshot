@@ -35,8 +35,20 @@ OverlayMessage::OverlayMessage(QWidget* parent, const QRect& targetArea)
     QWidget::hide();
 }
 
+OverlayMessage::~OverlayMessage()
+{
+    // The instance is a child widget, so it is destroyed with its parent.
+    // Without this, m_instance outlives it and dangles.
+    if (m_instance == this) {
+        m_instance = nullptr;
+    }
+}
+
 void OverlayMessage::init(QWidget* parent, const QRect& targetArea)
 {
+    // Several capture widgets can be alive at once; only the armed one owns
+    // the overlay, so drop any previous instance rather than leaking it.
+    delete m_instance;
     new OverlayMessage(parent, targetArea);
 }
 
@@ -46,6 +58,9 @@ void OverlayMessage::init(QWidget* parent, const QRect& targetArea)
  */
 void OverlayMessage::push(const QString& msg)
 {
+    if (!m_instance) {
+        return;
+    }
     m_instance->m_messageStack.push(msg);
     m_instance->setText(m_instance->m_messageStack.top());
     setVisibility(true);
@@ -53,6 +68,9 @@ void OverlayMessage::push(const QString& msg)
 
 void OverlayMessage::pop()
 {
+    if (!m_instance) {
+        return;
+    }
     if (m_instance->m_messageStack.size() > 1) {
         m_instance->m_messageStack.pop();
     }
@@ -63,6 +81,9 @@ void OverlayMessage::pop()
 
 void OverlayMessage::setVisibility(bool visible)
 {
+    if (!m_instance) {
+        return;
+    }
     m_instance->updateGeometry();
     m_instance->setVisible(visible);
 }

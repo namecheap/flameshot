@@ -21,6 +21,7 @@ class OverlayMessage : public QLabel
 {
 public:
     OverlayMessage() = delete;
+    ~OverlayMessage() override;
 
     static void init(QWidget* parent, const QRect& targetArea);
     static void push(const QString& msg);

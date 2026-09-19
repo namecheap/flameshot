@@ -47,6 +47,10 @@
 
 auto const MOUSE_WHEEL_TRESHOLD = 60;
 
+// Extra dimming applied to displays the pointer is not on, while no display
+// has been committed to yet.
+auto const UNARMED_EXTRA_OPACITY = 70;
+
 // CaptureWidget is the main component used to capture the screen. It contains
 // an area of selection with its respective buttons.
 
@@ -274,7 +278,9 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
       ConfigHandler::getInstance(), &ConfigHandler::error, this, [=, this]() {
           m_configError = true;
           m_configErrorResolved = false;
-          OverlayMessage::instance()->update();
+          if (auto* overlay = OverlayMessage::instance()) {
+              overlay->update();
+          }
       });
     connect(ConfigHandler::getInstance(),
             &ConfigHandler::errorResolved,
@@ -282,7 +288,9 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
             [=, this]() {
                 m_configError = false;
                 m_configErrorResolved = true;
-                OverlayMessage::instance()->update();
+                if (auto* overlay = OverlayMessage::instance()) {
+                    overlay->update();
+                }
             });
 
     // OverlayMessage is a child widget, so use widget-local coordinates
@@ -326,9 +334,50 @@ CaptureWidget::~CaptureWidget()
         geometry.setTopLeft(geometry.topLeft() + m_context.widgetOffset);
         Flameshot::instance()->exportCapture(
           pixmap(), geometry, m_context.request);
-    } else {
+    } else if (!m_discardSilently) {
         emit Flameshot::instance()->captureFailed();
     }
+}
+
+int CaptureWidget::monitorIndex() const
+{
+    return m_context.request.hasSelectedMonitor()
+             ? m_context.request.selectedMonitor()
+             : -1;
+}
+
+void CaptureWidget::discardSilently()
+{
+    m_discardSilently = true;
+}
+
+void CaptureWidget::setArmed(bool armed)
+{
+    if (m_armed == armed) {
+        return;
+    }
+    m_armed = armed;
+
+    // The unarmed displays stay visible but recede, so the pointer's display
+    // reads as the active one.
+    if (armed) {
+        m_opacity = m_armedOpacity;
+    } else {
+        m_armedOpacity = m_opacity;
+        m_opacity = qMin(255, m_opacity + UNARMED_EXTRA_OPACITY);
+    }
+
+    if (m_magnifier) {
+        m_magnifier->setVisible(armed && m_config.showMagnifier());
+    }
+    OverlayMessage::setVisibility(armed);
+    update();
+}
+
+void CaptureWidget::enterEvent(QEnterEvent* event)
+{
+    emit pointerEnteredMonitor(monitorIndex());
+    QWidget::enterEvent(event);
 }
 
 void CaptureWidget::initButtons()
@@ -875,6 +924,10 @@ int CaptureWidget::selectToolItemAtPos(const QPoint& pos)
 
 void CaptureWidget::mousePressEvent(QMouseEvent* e)
 {
+    // Before anything else: the press is what commits the user to this
+    // display, and it is authoritative even if an Enter was dropped.
+    emit editingStarted(monitorIndex());
+
     activateWindow();
     m_startMove = false;
     m_startMovePos = QPoint();

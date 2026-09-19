@@ -37,6 +37,29 @@
 #endif
 
 bool ScreenGrabber::m_monitorSelectionActive = false;
+QPixmap* ScreenGrabber::m_sessionPixmap = nullptr;
+
+ScreenGrabber::SessionCache::SessionCache(const QPixmap& fullDesktop)
+{
+    delete ScreenGrabber::m_sessionPixmap;
+    ScreenGrabber::m_sessionPixmap = new QPixmap(fullDesktop);
+}
+
+ScreenGrabber::SessionCache::~SessionCache()
+{
+    delete ScreenGrabber::m_sessionPixmap;
+    ScreenGrabber::m_sessionPixmap = nullptr;
+}
+
+bool ScreenGrabber::hasSessionPixmap()
+{
+    return m_sessionPixmap != nullptr && !m_sessionPixmap->isNull();
+}
+
+QPixmap ScreenGrabber::sessionPixmap()
+{
+    return m_sessionPixmap != nullptr ? *m_sessionPixmap : QPixmap();
+}
 
 ScreenGrabber::ScreenGrabber(QObject* parent)
   : QObject(parent)
@@ -244,25 +267,9 @@ QPixmap ScreenGrabber::selectMonitorAndCrop(const QPixmap& fullScreenshot,
         return cropToMonitor(fullScreenshot, 0);
     }
 
-    // Capture Active Monitor: auto-select monitor under cursor
-    if (ConfigHandler().captureActiveMonitor()) {
-        if (m_info.waylandDetected()) {
-            AbstractLogger::error()
-              << tr("Capture Active Monitor is not supported on Wayland due to "
-                    "Wayland security model.");
-            ok = false;
-            return QPixmap();
-        }
-
-        QGuiAppCurrentScreen screenFinder;
-        QScreen* cursorScreen = screenFinder.currentScreen();
-        int monitorIndex = screens.indexOf(cursorScreen);
-        if (monitorIndex >= 0) {
-            m_selectedMonitor = monitorIndex;
-            return cropToMonitor(fullScreenshot, monitorIndex);
-        }
-        // Fall through to manual selection if screen lookup fails
-    }
+    // "Capture the display under the cursor" no longer reaches this function:
+    // MultiMonitorCaptureSession builds a widget per display with the monitor
+    // already chosen, so the picker below is only for the other mode.
 
     if (m_monitorSelectionActive) {
         AbstractLogger::error()
@@ -326,12 +333,16 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     return screenshot;
 
 #elif defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
-    screenshot = unixScreenshot(ok);
-    if (!ok) {
-        return QPixmap();
+    if (hasSessionPixmap()) {
+        screenshot = sessionPixmap();
+    } else {
+        screenshot = unixScreenshot(ok);
+        if (!ok) {
+            return QPixmap();
+        }
     }
 #elif defined(Q_OS_WIN)
-    screenshot = windowsScreenshot(wid);
+    screenshot = hasSessionPixmap() ? sessionPixmap() : windowsScreenshot(wid);
 #endif
 
     // If monitor was pre-selected skip UI and crop directly
