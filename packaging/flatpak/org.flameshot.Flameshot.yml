@@ -40,7 +40,7 @@ modules:
         
       - type: git
         url: https://github.com/namecheap/flameshot.git
-        branch: master_from_upsteam
+        branch: master
         # tag: v15.0.0.1
         # commit: e408812d77ff1835957f85796c4cf737466bd69d
 
