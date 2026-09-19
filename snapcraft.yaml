@@ -34,8 +34,8 @@ apps:
 parts:
   flameshot:
     plugin: cmake
-    source: https://github.com/flameshot-org/flameshot.git
-    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source: ./
+    source-type: local
     build-packages:
       - libxkbcommon-dev
       - libproxy-dev
