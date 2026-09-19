@@ -41,6 +41,7 @@ class UpdateNotificationWidget;
 #endif
 class UtilityPanel;
 class SidePanelWidget;
+class OverlayMessage;
 
 class CaptureWidget : public QWidget
 {
@@ -59,6 +60,19 @@ public:
                                    const QString& appLatestUrl);
 #endif
 
+    /// Monitor this widget was built for, or -1 when none was pre-selected.
+    int monitorIndex() const;
+
+    /// Suppress the captureFailed() this widget emits on destruction. Used for
+    /// the widgets discarded once the user commits to another display; without
+    /// it each one would abort the whole application.
+    void discardSilently();
+
+    /// Only the armed widget shows the help overlay and magnifier; the others
+    /// dim harder, so the display the pointer is on is obvious.
+    void setArmed(bool armed);
+    bool isArmed() const { return m_armed; }
+
 public slots:
     bool commitCurrentTool();
     void deleteToolWidgetOrClose();
@@ -66,6 +80,10 @@ public slots:
 signals:
     void colorChanged(const QColor& c);
     void toolSizeChanged(int size);
+    /// The pointer moved onto this widget's display.
+    void pointerEnteredMonitor(int monitorIndex);
+    /// First press: the user committed to this display.
+    void editingStarted(int monitorIndex);
 
 private slots:
     void undo();
@@ -100,6 +118,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* paintEvent) override;
+    void enterEvent(QEnterEvent* enterEvent) override;
     void mousePressEvent(QMouseEvent* mouseEvent) override;
     void mouseMoveEvent(QMouseEvent* mouseEvent) override;
     void mouseReleaseEvent(QMouseEvent* mouseEvent) override;
@@ -182,6 +201,13 @@ private:
     bool m_adjustmentButtonPressed;
     bool m_configError;
     bool m_configErrorResolved;
+    bool m_discardSilently = false;
+    bool m_armed = true;
+    int m_armedOpacity = 0;
+    // This widget's own overlay, and the "Tool Settings" toggle, both hidden
+    // while the display is unarmed.
+    OverlayMessage* m_overlay = nullptr;
+    QWidget* m_panelToggleButton = nullptr;
 
 #if !defined(DISABLE_UPDATE_CHECKER)
     UpdateNotificationWidget* m_updateNotificationWidget;
