@@ -274,7 +274,9 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
       ConfigHandler::getInstance(), &ConfigHandler::error, this, [=, this]() {
           m_configError = true;
           m_configErrorResolved = false;
-          OverlayMessage::instance()->update();
+          if (auto* overlay = OverlayMessage::instance()) {
+              overlay->update();
+          }
       });
     connect(ConfigHandler::getInstance(),
             &ConfigHandler::errorResolved,
@@ -282,7 +284,9 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
             [=, this]() {
                 m_configError = false;
                 m_configErrorResolved = true;
-                OverlayMessage::instance()->update();
+                if (auto* overlay = OverlayMessage::instance()) {
+                    overlay->update();
+                }
             });
 
     // OverlayMessage is a child widget, so use widget-local coordinates
@@ -290,6 +294,7 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
     QRect overlayArea =
       m_context.fullscreen && !areas.isEmpty() ? areas.first() : rect();
     OverlayMessage::init(this, overlayArea);
+    m_overlay = OverlayMessage::instance();
 
     if (m_config.showHelp()) {
         initHelpMessage();
@@ -326,9 +331,70 @@ CaptureWidget::~CaptureWidget()
         geometry.setTopLeft(geometry.topLeft() + m_context.widgetOffset);
         Flameshot::instance()->exportCapture(
           pixmap(), geometry, m_context.request);
-    } else {
+    } else if (!m_discardSilently) {
         emit Flameshot::instance()->captureFailed();
     }
+}
+
+int CaptureWidget::monitorIndex() const
+{
+    return m_context.request.hasSelectedMonitor()
+             ? m_context.request.selectedMonitor()
+             : -1;
+}
+
+void CaptureWidget::discardSilently()
+{
+    m_discardSilently = true;
+}
+
+void CaptureWidget::setArmed(bool armed)
+{
+    if (m_armed == armed) {
+        return;
+    }
+    m_armed = armed;
+
+    // An unarmed display shows its screenshot untouched -- no shading and no
+    // chrome -- so only the display under the pointer looks like capture mode.
+    if (armed) {
+        m_opacity = m_armedOpacity;
+    } else {
+        m_armedOpacity = m_opacity;
+        m_opacity = 0;
+    }
+
+    if (m_magnifier) {
+        m_magnifier->setVisible(armed && m_config.showMagnifier());
+    }
+    if (m_panelToggleButton) {
+        m_panelToggleButton->setVisible(armed);
+    }
+    if (!armed) {
+        if (m_panel) {
+            m_panel->hide();
+        }
+        if (m_buttonHandler) {
+            m_buttonHandler->hide();
+        }
+    }
+
+    if (armed) {
+        OverlayMessage::setActive(m_overlay);
+        OverlayMessage::setVisibility(m_config.showHelp());
+    } else if (m_overlay) {
+        // Hidden directly rather than through the static accessor, which acts
+        // on whichever display is active -- possibly not this one.
+        m_overlay->setVisible(false);
+    }
+
+    update();
+}
+
+void CaptureWidget::enterEvent(QEnterEvent* event)
+{
+    emit pointerEnteredMonitor(monitorIndex());
+    QWidget::enterEvent(event);
 }
 
 void CaptureWidget::initButtons()
@@ -875,6 +941,10 @@ int CaptureWidget::selectToolItemAtPos(const QPoint& pos)
 
 void CaptureWidget::mousePressEvent(QMouseEvent* e)
 {
+    // Before anything else: the press is what commits the user to this
+    // display, and it is authoritative even if an Enter was dropped.
+    emit editingStarted(monitorIndex());
+
     activateWindow();
     m_startMove = false;
     m_startMovePos = QPoint();
@@ -1234,6 +1304,7 @@ void CaptureWidget::initPanel()
                                 panelRect.y() + panelRect.height() / 2 -
                                   panelToggleButton->width() / 2);
 #endif
+        m_panelToggleButton = panelToggleButton;
         panelToggleButton->setCursor(Qt::ArrowCursor);
         (new DraggableWidgetMaker(this))->makeDraggable(panelToggleButton);
         connect(panelToggleButton,
