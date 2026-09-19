@@ -1,5 +1,5 @@
 Name:    flameshot
-Version: 14.0.0.1
+Version: 15.0.0.1
 Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
 
@@ -144,8 +144,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
-* Wed Sep 19 2026 Yurii Puchkov <panpuchkov@gmail.com> - 14.0.0.1
-- Namecheap edition: S3 upload storage on top of upstream 14.0.0
+* Sat Sep 19 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.1
+- Namecheap edition: S3 upload storage on top of upstream 15.0.0
 
 * Mon May 18 2026 Jeremy Borgman <borgman.jeremy@pm.me> - 14.0.rc2
 - Beta for 14 release
