@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
-#include <QGraphicsDropShadowEffect>
-#include <QGraphicsOpacityEffect>
-#include <QPinchGesture>
-#include <QWindow>
 
 #include "pinwidget.h"
-#include "qguiappcurrentscreen.h"
-#include "screenshotsaver.h"
-#include "src/utils/confighandler.h"
-#include "src/utils/globalvalues.h"
+#include "core/qguiappcurrentscreen.h"
+#include "utils/confighandler.h"
+#include "utils/globalvalues.h"
+#include "utils/screenshotsaver.h"
 
+#include <QGraphicsDropShadowEffect>
+#include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QMenu>
+#include <QPinchGesture>
 #include <QScreen>
 #include <QShortcut>
 #include <QVBoxLayout>
 #include <QWheelEvent>
+#include <QWindow>
 
 namespace {
 constexpr int MARGIN = 7;
@@ -60,17 +60,16 @@ PinWidget::PinWidget(const QPixmap& pixmap,
     new QShortcut(Qt::Key_Escape, this, SLOT(close()));
 
     qreal devicePixelRatio = 1;
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     QScreen* currentScreen = QGuiAppCurrentScreen().currentScreen();
     if (currentScreen != nullptr) {
         devicePixelRatio = currentScreen->devicePixelRatio();
     }
-#endif
+
     const int margin =
       static_cast<int>(static_cast<double>(MARGIN) * devicePixelRatio);
     QRect adjusted_pos = geometry + QMargins(margin, margin, margin, margin);
     setGeometry(adjusted_pos);
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+
     if (currentScreen != nullptr) {
         QPoint topLeft = currentScreen->geometry().topLeft();
         adjusted_pos.setX((adjusted_pos.x() - topLeft.x()) / devicePixelRatio +
@@ -83,7 +82,7 @@ PinWidget::PinWidget(const QPixmap& pixmap,
         resize(0, 0);
         move(adjusted_pos.x(), adjusted_pos.y());
     }
-#endif
+
     grabGesture(Qt::PinchGesture);
 
     this->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -103,7 +102,7 @@ bool PinWidget::scrollEvent(QWheelEvent* event)
 {
     const auto phase = event->phase();
     if (phase == Qt::ScrollPhase::ScrollUpdate
-#if defined(Q_OS_LINUX) || defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+#if defined(Q_OS_UNIX) || defined(Q_OS_WINDOWS)
         || phase == Qt::ScrollPhase::NoScrollPhase
 #endif
     ) {

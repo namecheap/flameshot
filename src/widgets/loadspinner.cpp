@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "loadspinner.h"
+
 #include <QApplication>
 #include <QPaintEvent>
 #include <QPainter>
@@ -54,6 +55,8 @@ void LoadSpinner::stop()
 void LoadSpinner::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
+    if (!painter.isActive())
+        return;
     painter.setRenderHint(QPainter::Antialiasing, true);
     auto pen = QPen(m_color);
 

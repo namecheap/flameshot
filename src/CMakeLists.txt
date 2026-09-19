@@ -10,7 +10,7 @@ find_package(
         LinguistTools
 )
 
-if (UNIX AND NOT APPLE)
+if (UNIX)
 find_package(
         Qt${QT_VERSION_MAJOR}
         CONFIG
@@ -38,18 +38,18 @@ if (APPLE)
     )
 
     execute_process(
-            COMMAND bash "-c" "sips -z 16 16     \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_16x16.png"
-            COMMAND bash "-c" "sips -z 32 32     \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_16x16@2x.png"
-            COMMAND bash "-c" "sips -z 32 32     \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_32x32.png"
-            COMMAND bash "-c" "sips -z 64 64     \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_32x32@2x.png"
-            COMMAND bash "-c" "sips -z 64 64     \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_64x64x.png"
-            COMMAND bash "-c" "sips -z 128 128   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome.png --out \"${FLAMESHOT_ICONSET}\"/icon_64x64@2.png"
-            COMMAND bash "-c" "sips -z 128 128   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_128x128.png"
-            COMMAND bash "-c" "sips -z 256 256   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_128x128@2x.png"
-            COMMAND bash "-c" "sips -z 256 256   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_256x256.png"
-            COMMAND bash "-c" "sips -z 512 512   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_256x256@2x.png"
-            COMMAND bash "-c" "sips -z 512 512   \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_512x512.png"
-            COMMAND bash "-c" "sips -z 1024 1024 \"${CMAKE_SOURCE_DIR}\"/data/img/app/flameshot.monochrome-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_512x512@2x.png"
+            COMMAND bash "-c" "sips -z 16 16     \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_16x16.png"
+            COMMAND bash "-c" "sips -z 32 32     \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_16x16@2x.png"
+            COMMAND bash "-c" "sips -z 32 32     \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_32x32.png"
+            COMMAND bash "-c" "sips -z 64 64     \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_32x32@2x.png"
+            COMMAND bash "-c" "sips -z 64 64     \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_64x64x.png"
+            COMMAND bash "-c" "sips -z 128 128   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_64x64@2.png"
+            COMMAND bash "-c" "sips -z 128 128   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_128x128.png"
+            COMMAND bash "-c" "sips -z 256 256   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_128x128@2x.png"
+            COMMAND bash "-c" "sips -z 256 256   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_256x256.png"
+            COMMAND bash "-c" "sips -z 512 512   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_256x256@2x.png"
+            COMMAND bash "-c" "sips -z 512 512   \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_512x512.png"
+            COMMAND bash "-c" "sips -z 1024 1024 \"${CMAKE_SOURCE_DIR}\"/data/img/app/org.flameshot.Flameshot-1024.png --out \"${FLAMESHOT_ICONSET}\"/icon_512x512@2x.png"
 
             COMMAND bash "-c" "iconutil -o \"${FLAMESHOT_ICNS}\" -c icns \"${FLAMESHOT_ICONSET}\""
     )
@@ -174,50 +174,11 @@ target_sources(
         ${QM_FILES}
         main.cpp)
 
-target_include_directories(
-  flameshot
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../dbus/>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cli>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/arrow>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/pixelate>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/circle>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/circlecount>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/copy>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/exit>
-        if(ENABLE_IMGUR)
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/imgur>
-        endif()
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/launcher>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/line>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/marker>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/move>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/pencil>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/pin>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/rectangle>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/redo>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/save>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/invert>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/selection>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/sizeindicator>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/text>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/undo>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/sizeincrease>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tools/sizedecrease>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/widgets>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/widgets/panel>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/widgets/capture>
-         $<INSTALL_INTERFACE:include/mylib>)
-target_include_directories(
-    flameshot
-    PUBLIC
-         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/>
-         )
+
+target_include_directories(flameshot PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>  # src/
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/>
+)
 
 target_link_libraries(
         flameshot
@@ -228,7 +189,7 @@ target_link_libraries(
         Qt${QT_VERSION_MAJOR}::Widgets
         QtColorWidgets
 )
-if (UNIX AND NOT APPLE)
+if (UNIX)
 target_link_libraries(
         flameshot
         Qt${QT_VERSION_MAJOR}::DBus
@@ -296,6 +257,11 @@ if (WIN32)
     if (NOT USE_OPENSSL)
         message(WARNING "OpenSSL is required to upload screenshots")
     endif ()
+
+    target_link_libraries(
+            flameshot
+            qhotkey
+    )
 endif ()
 
 # Choose default color palette (small or large)

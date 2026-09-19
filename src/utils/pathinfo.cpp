@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "pathinfo.h"
+
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -21,7 +22,7 @@ QStringList PathInfo::translationsPaths()
     QString binaryPath =
       QFileInfo(qApp->applicationDirPath()).absoluteFilePath();
     QString trPath = QDir::toNativeSeparators(binaryPath + "/translations");
-#if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
+#if defined(Q_OS_UNIX)
     return QStringList()
            << QStringLiteral(APP_PREFIX) + "/share/flameshot/translations"
            << trPath << QStringLiteral("/usr/share/flameshot/translations")

@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "texttool.h"
-#include "src/utils/confighandler.h"
-#include "textconfig.h"
-#include "textwidget.h"
+#include "tools/text/textconfig.h"
+#include "tools/text/textwidget.h"
+#include "utils/confighandler.h"
 
 #define BASE_POINT_SIZE 8
 #define MAX_INFO_LENGTH 24
@@ -108,6 +108,12 @@ QWidget* TextTool::widget()
     m_widget->setText(m_text);
     m_widget->selectAll();
     connect(m_widget, &TextWidget::textUpdated, this, &TextTool::updateText);
+    connect(
+      m_widget,
+      &TextWidget::editingFinished,
+      this,
+      [this]() { emit requestAction(REQ_COMMIT_CURRENT_TOOL); },
+      Qt::QueuedConnection);
     return m_widget;
 }
 

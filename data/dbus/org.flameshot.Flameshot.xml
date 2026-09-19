@@ -3,8 +3,16 @@
   <interface name="org.flameshot.Flameshot">
 
     <!--
+        captureScreen:
+
+        Open the GUI screenshot capture tool.
+    -->
+    <method name="captureScreen"/>
+
+    <!--
         attachPin:
-        @data: Byte array containing the screenshot and geometry information.
+        @data: Byte array containing the screenshot, geometry information and
+        the screenshot's device pixel ratio.
 
         Attach a pinned screenshot widget to the daemon.
     -->

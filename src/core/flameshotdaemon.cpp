@@ -1,13 +1,13 @@
 #include "flameshotdaemon.h"
+#include "core/flameshot.h"
+#include "tools/pin/pinwidget.h"
+#include "utils/abstractlogger.h"
+#include "utils/confighandler.h"
+#include "utils/globalvalues.h"
+#include "utils/screenshotsaver.h"
+#include "widgets/capture/capturewidget.h"
+#include "widgets/trayicon.h"
 
-#include "abstractlogger.h"
-#include "confighandler.h"
-#include "flameshot.h"
-#include "pinwidget.h"
-#include "screenshotsaver.h"
-#include "src/utils/globalvalues.h"
-#include "src/widgets/capture/capturewidget.h"
-#include "src/widgets/trayicon.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QIODevice>
@@ -36,8 +36,28 @@
 #endif
 
 #ifdef Q_OS_WIN
-#include "src/core/globalshortcutfilter.h"
+#include "core/globalshortcutfilter.h"
 #endif
+
+namespace {
+/**
+ * @brief Read a pin message written by FlameshotDaemon::createPin.
+ *
+ * A QPixmap loses its device pixel ratio when it goes through a QDataStream,
+ * so it travels next to the pixmap and is restored here. Without it the pin is
+ * laid out in device pixels and comes out too big on a scaled screen. Messages
+ * from an older flameshot don't carry it, in which case the pixmap keeps the
+ * ratio it was created with.
+ */
+void readPin(QDataStream& stream, QPixmap& pixmap, QRect& geometry)
+{
+    qreal devicePixelRatio = 0;
+    stream >> pixmap >> geometry >> devicePixelRatio;
+    if (stream.status() == QDataStream::Ok && devicePixelRatio > 0) {
+        pixmap.setDevicePixelRatio(devicePixelRatio);
+    }
+}
+}
 
 /**
  * @brief A way of accessing the flameshot daemon both from the daemon itself,
@@ -51,9 +71,7 @@
  *   quits.
  *
  * If the `autoCloseIdleDaemon` option is true, the daemon will close as soon as
- * it is not needed to host pinned screenshots and the clipboard. On Windows,
- * this option is disabled and the daemon always persists, because the system
- * tray is currently the only way to interact with flameshot there.
+ * it is not needed to host pinned screenshots and the clipboard.
  *
  * Both the daemon and non-daemon flameshot processes use the same public API,
  * which is implemented as static methods. In the daemon process, this class is
@@ -72,7 +90,7 @@ FlameshotDaemon::FlameshotDaemon()
   , m_trayIcon(nullptr)
 #if !defined(DISABLE_UPDATE_CHECKER)
   , m_appLatestVersion(QStringLiteral(APP_VERSION).replace("v", ""))
-  , m_showCheckAppUpdateStatus(false)
+  , m_showManualCheckAppUpdateStatus(false)
   , m_networkCheckUpdates(nullptr)
 #endif
 {
@@ -85,9 +103,7 @@ FlameshotDaemon::FlameshotDaemon()
           m_hostingClipboard = false;
           quitIfIdle();
       });
-#ifdef Q_OS_WIN
-    m_persist = true;
-#else
+
     m_persist = !ConfigHandler().autoCloseIdleDaemon();
     connect(ConfigHandler::getInstance(),
             &ConfigHandler::fileChanged,
@@ -97,7 +113,6 @@ FlameshotDaemon::FlameshotDaemon()
                 enableTrayIcon(!config.disabledTrayIcon());
                 m_persist = !config.autoCloseIdleDaemon();
             });
-#endif
 
 #if !defined(DISABLE_UPDATE_CHECKER)
     if (ConfigHandler().checkForUpdates()) {
@@ -126,13 +141,15 @@ void FlameshotDaemon::createPin(const QPixmap& capture, QRect geometry)
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
 
+    // A QPixmap loses its device pixel ratio when streamed, so send it along.
 #if defined(USE_KDSINGLEAPPLICATION) &&                                        \
   (defined(Q_OS_MACOS) || defined(Q_OS_WIN))
     auto kdsa = KDSingleApplication(QStringLiteral("org.flameshot.Flameshot"));
-    stream << QStringLiteral("attachPin") << capture << geometry;
+    stream << QStringLiteral("attachPin") << capture << geometry
+           << capture.devicePixelRatio();
     kdsa.sendMessage(data);
 #else
-    stream << capture << geometry;
+    stream << capture << geometry << capture.devicePixelRatio();
     QDBusMessage m = createMethodCall(QStringLiteral("attachPin"));
     m << data;
     call(m);
@@ -238,11 +255,27 @@ void FlameshotDaemon::getLatestAvailableVersion()
 
 void FlameshotDaemon::checkForUpdates()
 {
-    if (m_appLatestUrl.isEmpty()) {
-        m_showCheckAppUpdateStatus = true;
-        getLatestAvailableVersion();
+    bool autoCheckEnabled = ConfigHandler().checkForUpdates();
+
+    if (autoCheckEnabled) {
+        if (!m_appLatestUrl.isEmpty()) {
+            QDesktopServices::openUrl(QUrl(m_appLatestUrl));
+        }
     } else {
-        QDesktopServices::openUrl(QUrl(m_appLatestUrl));
+        m_showManualCheckAppUpdateStatus = true;
+
+        if (m_appLatestUrl.isEmpty()) {
+            getLatestAvailableVersion();
+        } else {
+            QVersionNumber appLatestVersion =
+              QVersionNumber::fromString(m_appLatestVersion);
+            if (Flameshot::instance()->getVersion() < appLatestVersion) {
+                QDesktopServices::openUrl(QUrl(m_appLatestUrl));
+            } else {
+                sendTrayNotification(tr("You have the latest version"),
+                                     "Flameshot");
+            }
+        }
     }
 }
 #endif
@@ -319,8 +352,7 @@ void FlameshotDaemon::attachPin(const QByteArray& data)
     QPixmap pixmap;
     QRect geometry;
 
-    stream >> pixmap;
-    stream >> geometry;
+    readPin(stream, pixmap, geometry);
 
     attachPin(pixmap, geometry);
 }
@@ -355,18 +387,12 @@ void FlameshotDaemon::attachTextToClipboard(const QString& text,
 
 void FlameshotDaemon::initTrayIcon()
 {
-#if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
     if (!ConfigHandler().disabledTrayIcon()) {
         enableTrayIcon(true);
     }
-#elif defined(Q_OS_WIN)
-    enableTrayIcon(true);
-
+#if defined(Q_OS_WIN)
     GlobalShortcutFilter* nativeFilter = new GlobalShortcutFilter(this);
     qApp->installNativeEventFilter(nativeFilter);
-    connect(nativeFilter, &GlobalShortcutFilter::printPressed, this, [this]() {
-        Flameshot::instance()->gui();
-    });
 #endif
 }
 
@@ -387,9 +413,11 @@ void FlameshotDaemon::enableTrayIcon(bool enable)
 #if !defined(DISABLE_UPDATE_CHECKER)
 void FlameshotDaemon::handleReplyCheckUpdates(QNetworkReply* reply)
 {
-    if (!ConfigHandler().checkForUpdates()) {
+    if (!ConfigHandler().checkForUpdates() &&
+        !m_showManualCheckAppUpdateStatus) {
         return;
     }
+
     if (reply->error() == QNetworkReply::NoError) {
         QJsonDocument response = QJsonDocument::fromJson(reply->readAll());
         QJsonObject json = response.object();
@@ -400,20 +428,17 @@ void FlameshotDaemon::handleReplyCheckUpdates(QNetworkReply* reply)
         if (Flameshot::instance()->getVersion() < appLatestVersion) {
             emit newVersionAvailable(appLatestVersion);
             m_appLatestUrl = json["html_url"].toString();
-            QString newVersion =
-              tr("New version %1 is available").arg(m_appLatestVersion);
-            if (m_showCheckAppUpdateStatus) {
-                sendTrayNotification(newVersion, "Flameshot");
+            if (m_showManualCheckAppUpdateStatus) {
                 QDesktopServices::openUrl(QUrl(m_appLatestUrl));
             }
-        } else if (m_showCheckAppUpdateStatus) {
+        } else if (m_showManualCheckAppUpdateStatus) {
             sendTrayNotification(tr("You have the latest version"),
                                  "Flameshot");
         }
     } else {
         qWarning() << "Failed to get information about the latest version. "
                    << reply->errorString();
-        if (m_showCheckAppUpdateStatus) {
+        if (m_showManualCheckAppUpdateStatus) {
             if (FlameshotDaemon::instance()) {
                 FlameshotDaemon::instance()->sendTrayNotification(
                   tr("Failed to get information about the latest version."),
@@ -421,7 +446,7 @@ void FlameshotDaemon::handleReplyCheckUpdates(QNetworkReply* reply)
             }
         }
     }
-    m_showCheckAppUpdateStatus = false;
+    m_showManualCheckAppUpdateStatus = false;
 }
 #endif
 
@@ -470,7 +495,7 @@ void FlameshotDaemon::messageReceivedFromSecondaryInstance(
     if (methodCall == QStringLiteral("attachPin")) {
         QPixmap capture;
         QRect geometry;
-        stream >> capture >> geometry;
+        readPin(stream, capture, geometry);
         // qDebug() << "Pixmap:" << capture;
         // qDebug() << "Geometry:" << geometry;
         if (!capture.isNull()) {

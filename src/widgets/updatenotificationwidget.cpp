@@ -3,7 +3,8 @@
 //
 
 #include "updatenotificationwidget.h"
-#include "src/utils/confighandler.h"
+#include "utils/confighandler.h"
+
 #include <QDesktopServices>
 #include <QLabel>
 #include <QPropertyAnimation>
@@ -84,11 +85,16 @@ void UpdateNotificationWidget::ignoreButton()
 
 void UpdateNotificationWidget::updateButton()
 {
-    QDesktopServices::openUrl(m_appLatestUrl);
+    // Store URL before closing widgets
+    QString url = m_appLatestUrl;
+
     hide();
     if (parentWidget()) {
         parentWidget()->close();
     }
+
+    // Open URL after closing widgets
+    QDesktopServices::openUrl(QUrl(url));
 }
 
 void UpdateNotificationWidget::initInternalPanel()

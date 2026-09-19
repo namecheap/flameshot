@@ -6,13 +6,13 @@ on:
       - master
       - fix*
     paths-ignore:
-      - 'README.md'
+      - '*.md'
       - 'LICENSE'
       - 'docs/**'
 
   pull_request:
     paths-ignore:
-      - 'README.md'
+      - '*.md'
       - 'LICENSE'
       - 'docs/**'
       - 'data/translations/*.ts'
@@ -27,57 +27,86 @@ env:
   DOCKER_REPO: quay.io/flameshot-org/ci-building
   # building tool: https://github.com/flameshot-org/packpack
   PACKPACK_REPO: flameshot-org/packpack
-  ENABLE_IMGUR: ${{ vars.ENABLE_IMGUR || 'OFF' }}
-  DISABLE_UPDATE_CHECKER: ${{ vars.DISABLE_UPDATE_CHECKER || 'OFF' }}
 
 jobs:
   deb-pack:
     name: Build deb on ${{ matrix.dist.name }} ${{ matrix.dist.arch }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.dist.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         dist:
           - {
-              name: debian-12,
+              name: debian-13,
               os: debian,
-              symbol: bookworm,
-              arch: amd64
-            }
-          - {
-              name: ubuntu-22.04,
-              os: ubuntu,
-              symbol: jammy,
-              arch: amd64
+              symbol: trixie,
+              arch: amd64,
+              runs-on: ubuntu-latest
             }
           - {
               name: ubuntu-24.04,
               os: ubuntu,
               symbol: noble,
-              arch: amd64
+              arch: amd64,
+              runs-on: ubuntu-latest
+            }
+          - {
+              name: ubuntu-26.04,
+              os: ubuntu,
+              symbol: resolute,
+              arch: amd64,
+              runs-on: ubuntu-latest
+            }
+          - {
+              name: debian-13,
+              os: debian,
+              symbol: trixie,
+              arch: arm64,
+              runs-on: ubuntu-24.04-arm
+            }
+          - {
+              name: debian-13,
+              os: debian,
+              symbol: trixie,
+              arch: armhf,
+              runs-on: ubuntu-24.04-arm
+            }
+          - {
+              name: ubuntu-24.04,
+              os: ubuntu,
+              symbol: noble,
+              arch: arm64,
+              runs-on: ubuntu-24.04-arm
+            }
+          - {
+              name: ubuntu-26.04,
+              os: ubuntu,
+              symbol: resolute,
+              arch: arm64,
+              runs-on: ubuntu-24.04-arm
             }
 
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 #          ref: master
 
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -99,7 +128,7 @@ jobs:
           echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
 
       - name: Get packpack tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.PACKPACK_REPO }}
           path: tools
@@ -110,8 +139,20 @@ jobs:
         env:
           OS: ${{ matrix.dist.os }}
           DIST: ${{ matrix.dist.symbol }}
+          DOCKER_ARCH: ${{ matrix.dist.arch }}
           PRESERVE_ENVVARS: "GIT_HASH"
         run: |
+          case ${DOCKER_ARCH} in
+            armhf)
+              export ARCH=armhf
+              ;;
+            arm64)
+              export ARCH=aarch64
+              ;;
+            *)
+              export ARCH=${DOCKER_ARCH}
+              ;;
+          esac
           cp -r $GITHUB_WORKSPACE/packaging/debian $GITHUB_WORKSPACE
           bash $GITHUB_WORKSPACE/tools/packpack
           mv $GITHUB_WORKSPACE/build/${PRODUCT}_${VERSION}-${RELEASE}_${{ matrix.dist.arch }}.deb $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
@@ -122,7 +163,7 @@ jobs:
           sha256sum ${PRODUCT}-${VERSION}-${RELEASE}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb | tee ${PRODUCT}-${VERSION}-${RELEASE}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
 
       - name: Artifact Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
@@ -138,35 +179,35 @@ jobs:
       matrix:
         dist:
           - {
-              name: fedora-41,
+              name: fedora-43,
               os: fedora,
-              symbol: 41,
+              symbol: 43,
               arch: x86_64
             }
           - {
-              name: fedora-42,
+              name: fedora-44,
               os: fedora,
-              symbol: 42,
+              symbol: 44,
               arch: x86_64
             }
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 #          ref: master
 
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -188,7 +229,7 @@ jobs:
           echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
 
       - name: Get packpack tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.PACKPACK_REPO }}
           path: tools
@@ -199,7 +240,7 @@ jobs:
         if: matrix.dist.os == 'fedora'
         run: |
           mkdir $GITHUB_WORKSPACE/rpm
-          cp $GITHUB_WORKSPACE/packaging/rpm/fedora/flameshot.spec $GITHUB_WORKSPACE/rpm
+          cp $GITHUB_WORKSPACE/packaging/rpm/flameshot.spec $GITHUB_WORKSPACE/rpm
           bash $GITHUB_WORKSPACE/tools/packpack
         env:
           OS: ${{ matrix.dist.os }}
@@ -210,7 +251,7 @@ jobs:
         if: matrix.dist.os == 'opensuse-leap'
         run: |
           mkdir $GITHUB_WORKSPACE/rpm
-          cp $GITHUB_WORKSPACE/packaging/rpm/opensuse/flameshot.spec $GITHUB_WORKSPACE/rpm
+          cp $GITHUB_WORKSPACE/packaging/rpm/flameshot.spec $GITHUB_WORKSPACE/rpm
           bash $GITHUB_WORKSPACE/tools/packpack
         env:
           OS: ${{ matrix.dist.os }}
@@ -239,7 +280,7 @@ jobs:
 
       - name: Artifact Upload
         if: matrix.dist.os == 'fedora'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
@@ -248,7 +289,7 @@ jobs:
 
       - name: Artifact Upload
         if: matrix.dist.os == 'opensuse-leap'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-${{ matrix.dist.name }}-${{ matrix.dist.arch }}
           path: |
@@ -264,9 +305,9 @@ jobs:
       matrix:
         config:
           - {
-              name: ubuntu-22.04,
+              name: ubuntu-24.04,
               os: ubuntu,
-              symbol: jammy,
+              symbol: noble,
               arch: amd64,
               image_repo: quay.io/flameshot-org/ci-building
             }
@@ -281,21 +322,21 @@ jobs:
 
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 #          ref: master
 
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -362,7 +403,7 @@ jobs:
           sha256sum Flameshot-${VERSION}.x86_64.AppImage | tee Flameshot-${VERSION}.x86_64.AppImage.sha256sum
 
       - name: Artifact Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-appimage-x86_64
           path: |
@@ -376,20 +417,20 @@ jobs:
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: master
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -409,6 +450,14 @@ jobs:
           echo "VERSION=$(cat CMakeLists.txt |grep 'set.*(.*FLAMESHOT_VERSION' | sed 's/[^0-9.]*//' |sed 's/)//g')" >> $GITHUB_ENV
           echo "VER_INFO=${ver_info}" >> $GITHUB_ENV
           echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
+
+      - name: Update flatpak manifest with commit SHA
+        run: |
+          git_hash=$(git rev-parse HEAD)
+          sed -i "s/branch: master/commit: ${git_hash}/" packaging/flatpak/org.flameshot.Flameshot.yml
+          echo "=======FLATPAK MANIFEST========"
+          cat packaging/flatpak/org.flameshot.Flameshot.yml
+          echo "==============================="
 
       - name: Setup flatpak
         run: |
@@ -434,7 +483,7 @@ jobs:
           cd "$GITHUB_WORKSPACE/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/'!"; exit 11 ; }
           sha256sum org.flameshot.Flameshot-${VERSION}.x86_64.flatpak | tee org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum
       - name: Artifact Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-flatpak-x86_64
           path: |
@@ -448,13 +497,13 @@ jobs:
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: master
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -462,7 +511,7 @@ jobs:
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -497,7 +546,7 @@ jobs:
           cd "$GITHUB_WORKSPACE/build/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/build/'!"; exit 11 ; }
           sha256sum ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap | tee ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum
       - name: Artifact Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-snap-x86_64
           path: |

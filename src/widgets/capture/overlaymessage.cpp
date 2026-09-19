@@ -1,6 +1,6 @@
 #include "overlaymessage.h"
-#include "colorutils.h"
-#include "confighandler.h"
+#include "utils/colorutils.h"
+#include "utils/confighandler.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -33,6 +33,11 @@ OverlayMessage::OverlayMessage(QWidget* parent, const QRect& targetArea)
 
     setMargin(QFontMetrics(qApp->font()).height() / 2);
     QWidget::hide();
+}
+
+void OverlayMessage::init(QWidget* parent, const QRect& targetArea)
+{
+    new OverlayMessage(parent, targetArea);
 }
 
 /**
@@ -94,6 +99,8 @@ QString OverlayMessage::compileFromKeyMap(
 void OverlayMessage::paintEvent(QPaintEvent* e)
 {
     QPainter painter(this);
+    if (!painter.isActive())
+        return;
     painter.setRenderHint(QPainter::Antialiasing);
 
     painter.setBrush(QBrush(m_fillColor, Qt::SolidPattern));

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "magnifierwidget.h"
+
 #include <QApplication>
 #include <QEvent>
 #include <QMouseEvent>
@@ -35,6 +36,9 @@ MagnifierWidget::MagnifierWidget(const QPixmap& p,
 void MagnifierWidget::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
+    if (!p.isActive()) {
+        return;
+    }
     if (m_square) {
         drawMagnifier(p);
     } else {

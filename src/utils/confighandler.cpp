@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "confighandler.h"
-#include "abstractlogger.h"
-#include "src/tools/capturetool.h"
-#include "valuehandler.h"
+#include "tools/capturetool.h"
+#include "utils/abstractlogger.h"
+#include "utils/valuehandler.h"
+
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -15,7 +16,6 @@
 #include <QSharedPointer>
 #include <QStandardPaths>
 #include <QVector>
-#include <algorithm>
 #include <stdexcept>
 
 #if defined(Q_OS_MACOS)
@@ -26,7 +26,7 @@
 
 bool verifyLaunchFile()
 {
-#if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
+#if defined(Q_OS_UNIX)
     QString path = QStandardPaths::locate(QStandardPaths::GenericConfigLocation,
                                           "autostart/",
                                           QStandardPaths::LocateDirectory) +
@@ -79,8 +79,6 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     OPTION("showDesktopNotification"     ,Bool               ( true          )),
     OPTION("showAbortNotification"       ,Bool               ( true          )),
     OPTION("disabledTrayIcon"            ,Bool               ( false         )),
-    OPTION("useGrimAdapter"              ,Bool               ( false         )),
-    OPTION("disabledGrimWarning"         ,Bool               ( false         )),
     OPTION("historyConfirmationToDelete" ,Bool               ( true          )),
 #if !defined(DISABLE_UPDATE_CHECKER)
     OPTION("checkForUpdates"             ,Bool               ( true          )),
@@ -88,9 +86,7 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     OPTION("allowMultipleGuiInstances"   ,Bool               ( false         )),
     OPTION("showMagnifier"               ,Bool               ( false         )),
     OPTION("squareMagnifier"             ,Bool               ( false         )),
-#if !defined(Q_OS_WIN)
     OPTION("autoCloseIdleDaemon"         ,Bool               ( false         )),
-#endif
     OPTION("startupLaunch"               ,Bool               ( false         )),
     OPTION("showStartupLaunchMessage"    ,Bool               ( true          )),
     OPTION("showQuitPrompt"              ,Bool               ( false         )),
@@ -98,6 +94,9 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     OPTION("copyPathAfterSave"           ,Bool               ( false         )),
     OPTION("antialiasingPinZoom"         ,Bool               ( true          )),
     OPTION("useJpgForClipboard"          ,Bool               ( false         )),
+#if defined(Q_OS_MACOS)
+    OPTION("useNativeFullscreen"         ,Bool               ( false         )),
+#endif
     OPTION("uploadWithoutConfirmation"   ,Bool               ( false         )),
     OPTION("saveAfterCopy"               ,Bool               ( false         )),
     OPTION("savePath"                    ,ExistingDir        (               )),
@@ -119,6 +118,7 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     OPTION("drawThickness"               ,LowerBoundedInt    ( 1, 3          )),
     OPTION("drawFontSize"                ,LowerBoundedInt    ( 1, 8          )),
     OPTION("drawCircleCounterSize"       ,LowerBoundedInt    ( 1, 1          )),
+    OPTION("drawCircleCounterOutline"    ,Bool               ( true          )),
     OPTION("drawPixelateSize"            ,LowerBoundedInt    ( 1, 2          )),
     OPTION("drawRectangleSize"           ,LowerBoundedInt    ( 1, 1          )),
     OPTION("drawMarkerSize"              ,LowerBoundedInt    ( 1, 5          )),
@@ -137,7 +137,22 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     OPTION("showSelectionGeometryHideTime", LowerBoundedInt  ( 0, 3000       )),
     OPTION("jpegQuality"                 , BoundedInt        ( 0,100,75      )),
     OPTION("reverseArrow"                ,Bool               ( false         )),
+    OPTION("arrowStyle"                  ,BoundedInt         ( 0, 1, 0       )),
     OPTION("insecurePixelate"            ,Bool               ( false         )),
+#if defined(Q_OS_WIN)
+    // Not visible on settings dialog
+    OPTION("ignorePrntScrForcesSnipping" ,Bool               ( false         )),
+#endif
+#if !defined(Q_OS_MACOS)
+    // Auto-select the monitor under the cursor instead of showing
+    // the monitor selection UI. Not supported on Wayland.
+    OPTION("captureActiveMonitor"         ,Bool               ( false         )),
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    // Bypass freedesktop portal and use Qt's native X11
+    // screenshot method. Intended for WMs without xdg-desktop-portal.
+    OPTION("useX11LegacyScreenshot"      ,Bool               ( false         )),
+#endif
 };
 
 static QMap<QString, QSharedPointer<KeySequence>> recognizedShortcuts = {
@@ -182,6 +197,9 @@ static QMap<QString, QSharedPointer<KeySequence>> recognizedShortcuts = {
     SHORTCUT("TYPE_MOVE_UP"             ,   "Up"                    ),
     SHORTCUT("TYPE_MOVE_DOWN"           ,   "Down"                  ),
     SHORTCUT("TYPE_COMMIT_CURRENT_TOOL" ,   "Ctrl+Return"           ),
+#if defined(Q_OS_WIN)
+    SHORTCUT("TAKE_SCREENSHOT"          ,   "Meta+Shift+x"          ),
+#endif
 #if defined(Q_OS_MACOS)
     SHORTCUT("TYPE_DELETE_CURRENT_TOOL" ,   "Backspace"             ),
     SHORTCUT("TAKE_SCREENSHOT"          ,   "Ctrl+Shift+X"          ),
@@ -199,10 +217,15 @@ static QMap<QString, QSharedPointer<KeySequence>> recognizedShortcuts = {
 // CLASS CONFIGHANDLER
 
 ConfigHandler::ConfigHandler()
+#ifndef USE_PORTABLE_CONFIG
   : m_settings(QSettings::IniFormat,
                QSettings::UserScope,
                qApp->organizationName(),
                qApp->applicationName())
+#else
+  : m_settings(qApp->applicationDirPath() + "/flameshot.ini",
+               QSettings::IniFormat)
+#endif
 {
     static bool firstInitialization = true;
     if (firstInitialization) {
@@ -285,7 +308,7 @@ void ConfigHandler::setStartupLaunch(const bool start)
         qWarning() << "Unable to change login items, error:"
                    << process.readAll();
     }
-#elif defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
+#elif defined(Q_OS_UNIX)
     QString path =
       QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
       "/autostart/";
@@ -746,8 +769,9 @@ void ConfigHandler::ensureFileWatched() const
 {
     QFile file(m_settings.fileName());
     if (!file.exists()) {
-        file.open(QFileDevice::WriteOnly);
-        file.close();
+        if (file.open(QFileDevice::WriteOnly)) {
+            file.close();
+        }
     }
     if (m_configWatcher != nullptr && m_configWatcher->files().isEmpty() &&
         qApp != nullptr // ensures that the organization name can be accessed

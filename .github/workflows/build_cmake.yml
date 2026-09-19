@@ -4,13 +4,13 @@ on:
   push:
     branches: [ master ]
     paths-ignore:
-      - 'README.md'
+      - '*.md'
       - 'LICENSE'
       - 'docs/**'
   pull_request:
     branches: [ master ]
     paths-ignore:
-      - 'README.md'
+      - '*.md'
       - 'LICENSE'
       - 'docs/**'
       - 'data/translations/*.ts'
@@ -20,8 +20,6 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: RelWithDebInfo
-  ENABLE_IMGUR: ${{ vars.ENABLE_IMGUR || 'OFF' }}
-  DISABLE_UPDATE_CHECKER: ${{ vars.DISABLE_UPDATE_CHECKER || 'OFF' }}
 
 jobs:
   linux-build:
@@ -34,17 +32,17 @@ jobs:
     steps:
       - name: Checkout Source code
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Checkout Source code
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
@@ -70,10 +68,7 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        #
-        # We need to source the profile file to make sure conan is in PATH
+        # and build directories. We need to source the profile file to make sure conan is in PATH
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
       - name: Build
@@ -101,11 +96,11 @@ jobs:
             os: windows-2022,
             cc: "cl", cxx: "cl",
             environment_script: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
-            qt_ver: '6.9.1'
+            qt_ver: '6.9.3'
           }
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Fix Python path
         shell: pwsh

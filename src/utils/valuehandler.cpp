@@ -1,8 +1,9 @@
 #include "valuehandler.h"
-#include "capturetool.h"
-#include "colorpickerwidget.h"
-#include "confighandler.h"
-#include "screengrabber.h"
+#include "tools/capturetool.h"
+#include "utils/confighandler.h"
+#include "utils/screengrabber.h"
+#include "widgets/colorpickerwidget.h"
+
 #include <QColor>
 #include <QFileInfo>
 #include <QImageWriter>
@@ -10,6 +11,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QVariant>
+#include <memory>
 
 // VALUE HANDLER
 
@@ -529,34 +531,28 @@ bool Region::check(const QVariant& val)
 
 QVariant Region::process(const QVariant& val)
 {
-    // FIXME: This is temporary, just before D-Bus is removed
-    char** argv = new char*[1];
-    int* argc = new int{ 0 };
-    if (QGuiApplication::screens().empty()) {
-        new QApplication(*argc, argv);
+    // Create a temporary QApplication if there is no global Qt application
+    // instance at all. Creating one while a QCoreApplication already exists
+    // is forbidden by Qt: the second constructor aborts early, but its
+    // destructor still runs and corrupts global state (e.g. Wayland
+    // connections), causing subsequent portal calls to hang.
+    auto argv = std::make_unique<char*[]>(1);
+    auto argc = std::make_unique<int>(0);
+    std::unique_ptr<QApplication> tempApp;
+    if (!QCoreApplication::instance()) {
+        tempApp = std::make_unique<QApplication>(*argc, argv.get());
     }
 
     QString str = val.toString();
 
-    if (str == "all") {
-        return ScreenGrabber().desktopGeometry();
-    } else if (str.startsWith("screen")) {
-        bool ok;
-        int number = str.mid(6).toInt(&ok);
-        if (!ok || number < 0) {
-            return {};
-        }
-        return ScreenGrabber().screenGeometry(qApp->screens()[number]);
-    }
-
     static const QRegularExpression regex(
-      "(-{,1}\\d+)"   // number (any sign)
+      "(-?\\d+)"      // number (any sign)
       "[x,\\.\\s]"    // separator ('x', ',', '.', or whitespace)
-      "(-{,1}\\d+)"   // number (any sign)
+      "(-?\\d+)"      // number (any sign)
       "[\\+,\\.\\s]*" // separator ('+',',', '.', or whitespace)
-      "(-{,1}\\d+)"   // number (non-negative)
+      "(-?\\d+)"      // number (non-negative)
       "[\\+,\\.\\s]*" // separator ('+', ',', '.', or whitespace)
-      "(-{,1}\\d+)"   // number (non-negative)
+      "(-?\\d+)"      // number (non-negative)
     );
 
     if (!regex.match(str).hasMatch()) {

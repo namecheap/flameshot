@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
+
 #include "generalconf.h"
-#include "src/core/flameshot.h"
-#include "src/utils/confighandler.h"
+#include "utils/confighandler.h"
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFile>
@@ -33,11 +34,8 @@ GeneralConf::GeneralConf(QWidget* parent)
     initScrollArea();
 
     initAutostart();
-#if !defined(Q_OS_WIN)
     initAutoCloseIdleDaemon();
-#endif
     initShowTrayIcon();
-    initUseGrimAdapter();
     initShowDesktopNotification();
     initShowAbortNotification();
 #if !defined(DISABLE_UPDATE_CHECKER)
@@ -56,6 +54,15 @@ GeneralConf::GeneralConf(QWidget* parent)
     initAntialiasingPinZoom();
     initUndoLimit();
     initInsecurePixelate();
+#if !defined(Q_OS_MACOS)
+    initCaptureActiveMonitor();
+#endif
+#if defined(Q_OS_MACOS)
+    initUseNativeFullscreen();
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    initUseX11LegacyScreenshot();
+#endif
 #ifdef ENABLE_IMGUR
     initCopyAndCloseAfterUpload();
     initUploadWithoutConfirmation();
@@ -72,6 +79,7 @@ GeneralConf::GeneralConf(QWidget* parent)
     initSquareMagnifier();
     initJpegQuality();
     initReverseArrow();
+    initDrawCircleCounterOutline();
     // this has to be at the end
     initConfigButtons();
     updateComponents();
@@ -106,11 +114,8 @@ void GeneralConf::_updateComponents(bool allowEmptySavePath)
     m_squareMagnifier->setChecked(config.squareMagnifier());
     m_saveLastRegion->setChecked(config.saveLastRegion());
     m_reverseArrow->setChecked(config.reverseArrow());
-
-#if !defined(Q_OS_WIN)
+    m_drawCircleCounterOutline->setChecked(config.drawCircleCounterOutline());
     m_autoCloseIdleDaemon->setChecked(config.autoCloseIdleDaemon());
-#endif
-
     m_predefinedColorPaletteLarge->setChecked(
       config.predefinedColorPaletteLarge());
     m_showStartupLaunchMessage->setChecked(config.showStartupLaunchMessage());
@@ -121,12 +126,17 @@ void GeneralConf::_updateComponents(bool allowEmptySavePath)
     if (allowEmptySavePath || !config.savePath().isEmpty()) {
         m_savePath->setText(config.savePath());
     }
-#if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
-    m_showTray->setChecked(!config.disabledTrayIcon());
-#endif
 
-#if defined(Q_OS_LINUX)
-    m_useGrimAdapter->setChecked(config.useGrimAdapter());
+    m_showTray->setChecked(!config.disabledTrayIcon());
+
+#if !defined(Q_OS_MACOS)
+    m_captureActiveMonitor->setChecked(config.captureActiveMonitor());
+#endif
+#if defined(Q_OS_MACOS)
+    m_useNativeFullscreen->setChecked(config.useNativeFullscreen());
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    m_useX11LegacyScreenshot->setChecked(config.useX11LegacyScreenshot());
 #endif
 }
 
@@ -158,11 +168,6 @@ void GeneralConf::showDesktopNotificationChanged(bool checked)
 void GeneralConf::showAbortNotificationChanged(bool checked)
 {
     ConfigHandler().setShowAbortNotification(checked);
-}
-
-void GeneralConf::useGrimAdapter(bool checked)
-{
-    ConfigHandler().useGrimAdapter(checked);
 }
 
 #if !defined(DISABLE_UPDATE_CHECKER)
@@ -332,7 +337,6 @@ void GeneralConf::initShowAbortNotification()
 
 void GeneralConf::initShowTrayIcon()
 {
-#if defined(Q_OS_LINUX) || defined(Q_OS_UNIX)
     m_showTray = new QCheckBox(tr("Show tray icon"), this);
     m_showTray->setToolTip(tr("Show icon in the system tray"));
     m_scrollAreaLayout->addWidget(m_showTray);
@@ -340,25 +344,6 @@ void GeneralConf::initShowTrayIcon()
     connect(m_showTray, &QCheckBox::clicked, this, [](bool checked) {
         ConfigHandler().setDisabledTrayIcon(!checked);
     });
-#endif
-}
-
-void GeneralConf::initUseGrimAdapter()
-{
-#if defined(Q_OS_LINUX)
-    m_useGrimAdapter =
-      new QCheckBox(tr("Use grim to capture screenshots"), this);
-    m_useGrimAdapter->setToolTip(
-      tr("Grim is a wayland only utility to capture screens based on the "
-         "screencopy protocol. Generally only enable on minimal wayland window "
-         "managers like sway, hyprland, etc."));
-    m_scrollAreaLayout->addWidget(m_useGrimAdapter);
-
-    connect(m_useGrimAdapter,
-            &QCheckBox::clicked,
-            this,
-            &GeneralConf::useGrimAdapter);
-#endif
 }
 
 void GeneralConf::initHistoryConfirmationToDelete()
@@ -681,14 +666,20 @@ void GeneralConf::initUseJpgForClipboard()
 {
     m_useJpgForClipboard =
       new QCheckBox(tr("Use JPG format for clipboard (PNG default)"), this);
+
+#ifdef Q_OS_WIN
+    ConfigHandler().setUseJpgForClipboard(false);
+    m_useJpgForClipboard->setVisible(false);
+#else
     m_useJpgForClipboard->setToolTip(
       tr("Use lossy JPG format for clipboard (lossless PNG default)"));
-    m_scrollAreaLayout->addWidget(m_useJpgForClipboard);
-
     connect(m_useJpgForClipboard,
             &QCheckBox::clicked,
             this,
             &GeneralConf::useJpgForClipboardChanged);
+#endif
+
+    m_scrollAreaLayout->addWidget(m_useJpgForClipboard);
 }
 
 void GeneralConf::saveAfterCopyChanged(bool checked)
@@ -876,6 +867,20 @@ void GeneralConf::initReverseArrow()
       m_reverseArrow, &QCheckBox::clicked, this, &GeneralConf::setReverseArrow);
 }
 
+void GeneralConf::initDrawCircleCounterOutline()
+{
+    m_drawCircleCounterOutline =
+      new QCheckBox(tr("Draw outline around circle counter"), this);
+    m_drawCircleCounterOutline->setToolTip(
+      tr("Draw a contrasting ring around the counter bubble so it stays "
+         "visible on any background"));
+    m_scrollAreaLayout->addWidget(m_drawCircleCounterOutline);
+
+    connect(m_drawCircleCounterOutline, &QCheckBox::clicked, [](bool checked) {
+        ConfigHandler().setDrawCircleCounterOutline(checked);
+    });
+}
+
 void GeneralConf::initInsecurePixelate()
 {
     m_insecurePixelate = new QCheckBox(tr("Insecure Pixelate"), this);
@@ -930,3 +935,74 @@ void GeneralConf::setInsecurePixelate(bool checked)
 {
     ConfigHandler().setInsecurePixelate(checked);
 }
+
+#if !defined(Q_OS_MACOS)
+void GeneralConf::initCaptureActiveMonitor()
+{
+    m_captureActiveMonitor = new QCheckBox(
+      tr("Capture active monitor in X11 and Windows (skip monitor selection)"),
+      this);
+    m_captureActiveMonitor->setToolTip(
+      tr("Automatically capture the monitor where the cursor is located "
+         "instead of showing the monitor selection dialog. "
+         "This feature is not supported on macOS and Wayland."));
+    m_scrollAreaLayout->addWidget(m_captureActiveMonitor);
+
+    connect(m_captureActiveMonitor,
+            &QCheckBox::clicked,
+            this,
+            &GeneralConf::captureActiveMonitorChanged);
+}
+
+void GeneralConf::captureActiveMonitorChanged(bool checked)
+{
+    ConfigHandler().setCaptureActiveMonitor(checked);
+}
+#endif
+
+#if defined(Q_OS_MACOS)
+void GeneralConf::initUseNativeFullscreen()
+{
+    m_useNativeFullscreen =
+      new QCheckBox(tr("Use native fullscreen for capture overlay"), this);
+    m_useNativeFullscreen->setToolTip(
+      tr("Use macOS native fullscreen mode for the capture overlay. "
+         "When disabled (default), the overlay avoids the fullscreen "
+         "desktop animation."));
+    m_scrollAreaLayout->addWidget(m_useNativeFullscreen);
+
+    connect(m_useNativeFullscreen,
+            &QCheckBox::clicked,
+            this,
+            &GeneralConf::useNativeFullscreenChanged);
+}
+
+void GeneralConf::useNativeFullscreenChanged(bool checked)
+{
+    ConfigHandler().setUseNativeFullscreen(checked);
+}
+#endif
+
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+void GeneralConf::initUseX11LegacyScreenshot()
+{
+    m_useX11LegacyScreenshot =
+      new QCheckBox(tr("Use legacy X11 screenshot method"), this);
+    m_useX11LegacyScreenshot->setToolTip(
+      tr("Bypass the freedesktop portal and use Qt's native X11 screen "
+         "capture. Enable this if your window manager lacks "
+         "xdg-desktop-portal (e.g. xmonad, i3). "
+         "Only effective on X11; ignored on Wayland."));
+    m_scrollAreaLayout->addWidget(m_useX11LegacyScreenshot);
+
+    connect(m_useX11LegacyScreenshot,
+            &QCheckBox::clicked,
+            this,
+            &GeneralConf::useX11LegacyScreenshotChanged);
+}
+
+void GeneralConf::useX11LegacyScreenshotChanged(bool checked)
+{
+    ConfigHandler().setUseX11LegacyScreenshot(checked);
+}
+#endif

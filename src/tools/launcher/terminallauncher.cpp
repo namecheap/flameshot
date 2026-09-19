@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "terminallauncher.h"
+
 #include <QDir>
 #include <QProcess>
 #include <QProcessEnvironment>
@@ -41,8 +42,12 @@ TerminalApp TerminalLauncher::getPreferedTerminal()
     return res;
 }
 
-bool TerminalLauncher::launchDetached(const QString& command)
+bool TerminalLauncher::launchDetached(const QStringList& args)
 {
     TerminalApp app = getPreferedTerminal();
-    return QProcess::startDetached(app.name, { app.arg, command });
+    if (app.name.isEmpty())
+        return false;
+    QStringList termArgs = { app.arg };
+    termArgs.append(args);
+    return QProcess::startDetached(app.name, termArgs);
 }

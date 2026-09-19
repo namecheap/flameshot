@@ -1,37 +1,62 @@
-#
-# spec file for package flameshot on fedora, rhel
-#
 Name:    flameshot
-Version: 13.1.0.5
-Release: 2%{?dist}
-License: GPLv3+ and ASL 2.0 and GPLv2 and LGPLv3 and Free Art
+Version: 15.0.0.1
+Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
-URL:     https://github.com/flameshot-org/flameshot
+
+License: GPL-3.0-or-later
+URL:     https://github.com/namecheap/flameshot
 Source0: %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
-Vendor:  Flameshot
+Vendor:  Namecheap
 
-BuildRequires: cmake >= 3.13.0
-BuildRequires: gcc-c++ >= 7
-BuildRequires: fdupes
-BuildRequires: libappstream-glib
-BuildRequires: ninja-build
+BuildRequires: git
+BuildRequires: cmake
 BuildRequires: desktop-file-utils
+BuildRequires: jdupes
 
-BuildRequires: cmake(Qt6Core) >= 6.0.0
-BuildRequires: cmake(KF6GuiAddons) >= 6.7.0
-BuildRequires: cmake(Qt6DBus) >= 6.0.0
-BuildRequires: cmake(Qt6Gui) >= 6.0.0
-BuildRequires: cmake(Qt6LinguistTools) >= 6.0.0
-BuildRequires: cmake(Qt6Network) >= 6.0.0
-BuildRequires: cmake(Qt6Svg) >= 6.0.0
-BuildRequires: cmake(Qt6Widgets) >= 6.0.0
+%if 0%{?suse_version}
+BuildRequires: gcc15-c++
+BuildRequires: ninja
+BuildRequires: update-desktop-files
+BuildRequires: appstream-glib
+%else
+BuildRequires: gcc-c++
+BuildRequires: ninja-build
+BuildRequires: libappstream-glib
+%endif
+
+BuildRequires: cmake(Qt6Core) >= 6.2.4
+BuildRequires: cmake(Qt6DBus) >= 6.2.4
+BuildRequires: cmake(Qt6Gui) >= 6.2.4
+BuildRequires: cmake(Qt6LinguistTools) >= 6.2.4
+BuildRequires: cmake(Qt6Network) >= 6.2.4
+BuildRequires: cmake(Qt6Svg) >= 6.2.4
+BuildRequires: cmake(Qt6Widgets) >= 6.2.4
+
+%if 0%{?fedora} || 0%{?suse_version} >= 1550 || (0%{?rhel} >= 10 && (0%{?centos} || 0%{?epel}))
+%global wayland_clipboard ON
+BuildRequires:  kf6-kguiaddons-devel >= 6.7.0
+%else
+%global wayland_clipboard OFF
+%endif
 
 Requires: hicolor-icon-theme
-Requires: qt6-qtbase >= 6.0.0
-Requires: qt6-qttools >= 6.0.0
-Requires: qt6-qtsvg >= 6.0.0
 
-Recommends: qt6-qtimageformats
+%if 0%{?suse_version}
+Requires: qt6-svg
+%else
+%if 0%{?fedora} || 0%{?rhel}
+Requires: qt6-qtsvg%{?_isa}
+%else
+Requires: qt6-svg%{?_isa}
+%endif
+%endif
+
+%if 0%{?suse_version}
+Recommends: qt6-imageformats
+%else
+Recommends: qt6-qtimageformats%{?_isa}
+%endif
+
 Recommends: xdg-desktop-portal%{?_isa}
 Recommends: (xdg-desktop-portal-gnome%{?_isa} if gnome-shell%{?_isa})
 Recommends: (xdg-desktop-portal-kde%{?_isa} if plasma-workspace-wayland%{?_isa})
@@ -52,14 +77,34 @@ Features:
 %autosetup -p1
 
 %build
-%cmake -G Ninja \
+%if 0%{?suse_version}
+export CXX=/usr/bin/g++-15
+
+cmake -G Ninja -S . -B build \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
     -DCMAKE_BUILD_TYPE=Release \
-    -DUSE_WAYLAND_CLIPBOARD:BOOL=ON \
-    -DBUILD_SHARED_LIBS:BOOL=OFF
+    -DUSE_WAYLAND_CLIPBOARD=%{wayland_clipboard} \
+    -DBUILD_SHARED_LIBS=OFF
+
+cmake --build build -j $(nproc)
+%else
+%cmake -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUSE_WAYLAND_CLIPBOARD=%{wayland_clipboard} \
+    -DBUILD_SHARED_LIBS=OFF
+
 %cmake_build
+%endif
 
 %install
+%if 0%{?suse_version}
+DESTDIR=%{buildroot} cmake --install build
+%suse_update_desktop_file -r org.flameshot.Flameshot Utility X-SuSE-DesktopUtility
+%else
 %cmake_install
+%endif
+
 rm -rf %{buildroot}%{_includedir}/QtColorWidgets
 rm -rf %{buildroot}%{_libdir}/cmake/QtColorWidgets
 rm -f %{buildroot}%{_libdir}/libQtColorWidgets.*
@@ -67,12 +112,15 @@ rm -f %{buildroot}%{_libdir}/pkgconfig/QtColorWidgets.pc
 rm -rf %{buildroot}%{_includedir}/kdsingleapplication-qt6
 rm -rf %{buildroot}%{_libdir}/cmake/KDSingleApplication-qt6
 rm -f %{buildroot}%{_libdir}/libkdsingleapplication-qt6.*
-# https://fedoraproject.org/wiki/PackagingDrafts/find_lang
+
 %find_lang Internationalization --with-qt
-%fdupes %{buildroot}%{_datadir}/icons
+
+jdupes %{buildroot}%{_datadir}/icons
 
 %check
-appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
+%if ! (0%{?rhel} <= 9)
+appstream-util validate-relax --nonet %{buildroot}%{_datadir}/metainfo/*.metainfo.xml || true
+%endif
 desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 
 %files -f Internationalization.lang
@@ -85,7 +133,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %dir %{_datadir}/zsh/site-functions
 %{_bindir}/%{name}
 %{_datadir}/applications/org.flameshot.Flameshot.desktop
-%{_metainfodir}/org.flameshot.Flameshot.metainfo.xml
+%{_datadir}/metainfo/org.flameshot.Flameshot.metainfo.xml
 %{_datadir}/bash-completion/completions/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
 %{_datadir}/fish/vendor_completions.d/%{name}.fish
@@ -96,22 +144,37 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Sat Sep 19 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.1
+- Namecheap edition: S3 upload storage on top of upstream 15.0.0
+
+* Mon May 18 2026 Jeremy Borgman <borgman.jeremy@pm.me> - 14.0.rc2
+- Beta for 14 release
+
+* Mon Mar 02 2026 Jeremy Borgman <borgman.jeremy@pm.me> - 14.0.rc1
+- Beta for 14 release
+
+* Tue Oct 28 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.3.0
+- Updated for v13.3.0 release
+
+* Fri Oct 24 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.2.0
+- Updated for v13.2.0 release
+
 * Sat Aug 16 2025 Elliott Tallis <tallis.elliott@gmail.com> - 13.1.0-2
 - Minor spec file tweaks
 
-* Sun Aug 13 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.1.0
+* Fri Aug 15 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.1.0
 - Update for v13.1.0 release
 
-* Sun Aug 06 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.1
+* Wed Aug 06 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.1
 - Update for v13.0.1 release
 
 * Sun Aug 03 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.0
 - Update for v13 release
 
-* Sun Jul 17 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.rc2
+* Sun Jul 27 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.rc2
 - Beta for 13 release.
 
-* Sun Jul 12 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.rc1
+* Sat Jul 12 2025 Jeremy Borgman <borgman.jeremy@pm.me> - 13.0.rc1
 - Beta for 13 release.
 
 * Sun Jul 03 2022 Jeremy Borgman <borgman.jeremy@pm.me> - 12.1.0-1

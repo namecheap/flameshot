@@ -38,7 +38,6 @@ private slots:
     void showSidePanelButtonChanged(bool checked);
     void showDesktopNotificationChanged(bool checked);
     void showAbortNotificationChanged(bool checked);
-    void useGrimAdapter(bool checked);
 #if !defined(DISABLE_UPDATE_CHECKER)
     void checkForUpdatesChanged(bool checked);
 #endif
@@ -62,6 +61,15 @@ private slots:
     void setJpegQuality(int v);
     void setReverseArrow(bool checked);
     void setInsecurePixelate(bool checked);
+#if !defined(Q_OS_MACOS)
+    void captureActiveMonitorChanged(bool checked);
+#endif
+#if defined(Q_OS_MACOS)
+    void useNativeFullscreenChanged(bool checked);
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    void useX11LegacyScreenshotChanged(bool checked);
+#endif
 
 private:
     const QString chooseFolder(const QString& currentPath = "");
@@ -89,7 +97,6 @@ private:
     void initShowSidePanelButton();
     void initShowStartupLaunchMessage();
     void initShowTrayIcon();
-    void initUseGrimAdapter();
     void initSquareMagnifier();
     void initUndoLimit();
     void initUploadWithoutConfirmation();
@@ -100,7 +107,17 @@ private:
     void initShowSelectionGeometry();
     void initJpegQuality();
     void initReverseArrow();
+    void initDrawCircleCounterOutline();
     void initInsecurePixelate();
+#if !defined(Q_OS_MACOS)
+    void initCaptureActiveMonitor();
+#endif
+#if defined(Q_OS_MACOS)
+    void initUseNativeFullscreen();
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    void initUseX11LegacyScreenshot();
+#endif
 
     void _updateComponents(bool allowEmptySavePath);
 
@@ -111,7 +128,6 @@ private:
     QCheckBox* m_sysNotifications;
     QCheckBox* m_abortNotifications;
     QCheckBox* m_showTray;
-    QCheckBox* m_useGrimAdapter;
     QCheckBox* m_helpMessage;
     QCheckBox* m_sidePanelButton;
 #if !defined(DISABLE_UPDATE_CHECKER)
@@ -149,5 +165,15 @@ private:
     QSpinBox* m_xywhTimeout;
     QSpinBox* m_jpegQuality;
     QCheckBox* m_reverseArrow;
+    QCheckBox* m_drawCircleCounterOutline;
     QCheckBox* m_insecurePixelate;
+#if !defined(Q_OS_MACOS)
+    QCheckBox* m_captureActiveMonitor;
+#endif
+#if defined(Q_OS_MACOS)
+    QCheckBox* m_useNativeFullscreen;
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    QCheckBox* m_useX11LegacyScreenshot;
+#endif
 };
