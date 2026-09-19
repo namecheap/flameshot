@@ -11,16 +11,15 @@
 
 #pragma once
 
-#include "buttonhandler.h"
-#include "capturetoolbutton.h"
-#include "capturetoolobjects.h"
-#include "src/config/generalconf.h"
-#include "src/tools/capturecontext.h"
-#include "src/tools/capturetool.h"
-#include "src/utils/DesktopCapturer.h"
-#include "src/utils/confighandler.h"
-#include "src/widgets/capture/magnifierwidget.h"
-#include "src/widgets/capture/selectionwidget.h"
+#include "tools/capturecontext.h"
+#include "tools/capturetool.h"
+#include "utils/confighandler.h"
+#include "widgets/capture/buttonhandler.h"
+#include "widgets/capture/capturetoolbutton.h"
+#include "widgets/capture/capturetoolobjects.h"
+#include "widgets/capture/magnifierwidget.h"
+#include "widgets/capture/selectionwidget.h"
+
 #include <QMessageBox>
 #include <QPointer>
 #include <QTimer>
@@ -37,9 +36,6 @@ class QNetworkReply;
 class ColorPicker;
 class NotifierBox;
 class HoverEventFilter;
-class OverlayMessage;
-class OrientablePushButton;
-
 #if !defined(DISABLE_UPDATE_CHECKER)
 class UpdateNotificationWidget;
 #endif
@@ -104,7 +100,6 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* paintEvent) override;
-    void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* mouseEvent) override;
     void mouseMoveEvent(QMouseEvent* mouseEvent) override;
     void mouseReleaseEvent(QMouseEvent* mouseEvent) override;
@@ -115,12 +110,9 @@ protected:
     void resizeEvent(QResizeEvent* resizeEvent) override;
     void moveEvent(QMoveEvent* moveEvent) override;
     void changeEvent(QEvent* changeEvent) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
-    void showHelp();
-    void initScreenshotEditor(bool compositeDesktop);
-    void moveToActiveScreen();
-    void setWidgetFlags();
     void pushObjectsStateToUndoStack();
     void releaseActiveTool();
     void uncheckActiveTool();
@@ -239,8 +231,5 @@ private:
     bool m_displayGrid{ false };
     int m_gridSize{ 10 };
 
-    //
-    DesktopCapturer m_desktopCapturer;
-    OverlayMessage* m_ovelayMessage;
-    OrientablePushButton* m_panelToggleButton;
+    bool m_clipboardWorkaroundDone{ false };
 };

@@ -1,5 +1,6 @@
 #include "history.h"
-#include "src/utils/confighandler.h"
+#include "utils/confighandler.h"
+
 #include <QDir>
 #include <QFile>
 #include <QProcessEnvironment>
@@ -44,8 +45,9 @@ void History::save(const QPixmap& pixmap, const QString& fileName)
 
     // save preview
     QFile file(path() + fileName);
-    file.open(QIODevice::WriteOnly);
-    pixmapScaled.save(&file, "PNG");
+    if (file.open(QIODevice::WriteOnly)) {
+        pixmapScaled.save(&file, "PNG");
+    }
 
     history();
 }

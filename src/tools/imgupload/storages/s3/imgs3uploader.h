@@ -18,7 +18,8 @@
 #pragma once
 
 #include "imgs3settings.h"
-#include "src/tools/imgupload/storages/imguploaderbase.h"
+#include "tools/imgupload/storages/imguploaderbase.h"
+
 #include <QWidget>
 
 #define SCREENSHOT_STORAGE_TYPE_S3 "s3"

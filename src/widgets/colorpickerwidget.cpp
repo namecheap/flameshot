@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2022 Dearsh Oberoi
 
 #include "colorpickerwidget.h"
-#include "src/utils/confighandler.h"
-#include "src/utils/globalvalues.h"
+#include "utils/confighandler.h"
+#include "utils/globalvalues.h"
+
 #include <QMouseEvent>
 #include <QPainter>
 
@@ -28,6 +29,8 @@ const QVector<QColor>& ColorPickerWidget::getDefaultLargeColorPalette()
 void ColorPickerWidget::paintEvent(QPaintEvent* e)
 {
     QPainter painter(this);
+    if (!painter.isActive())
+        return;
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(QColor(Qt::black));
 

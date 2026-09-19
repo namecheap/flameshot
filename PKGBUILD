@@ -6,11 +6,10 @@ pkgdesc="Powerful yet simple to use screenshot software"
 arch=('i686' 'x86_64' 'aarch64' 'armv7h')
 url="https://github.com/flameshot-org/flameshot"
 license=('GPL-3.0-or-later')
-depends=('qt6-base' 'qt6-svg' 'hicolor-icon-theme' 'kguiaddons')
+depends=('qt6-base' 'qt6-svg' 'hicolor-icon-theme' 'kguiaddons' 'kdsingleapplication')
 makedepends=('qt6-tools' 'cmake' 'ninja')
 optdepends=(
     'gnome-shell-extension-appindicator: for system tray icon if you are using Gnome'
-    'grim: for wlroots wayland support'
     'xdg-desktop-portal: for wayland support, you will need the implementation for your wayland desktop environment'
     'qt6-imageformats: for additional export image formats (e.g. tiff, webp, and more)'
 )
@@ -36,6 +35,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DUSE_WAYLAND_CLIPBOARD=1 \
         -DDISABLE_UPDATE_CHECKER=1 \
+        -DUSE_BUNDLED_KDSINGLEAPPLICATION=OFF \
 
     cmake --build build
 }

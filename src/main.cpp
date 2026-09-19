@@ -5,33 +5,35 @@
 #include <kdsingleapplication.h>
 #ifdef Q_OS_UNIX
 #include "core/signaldaemon.h"
-#include "csignal"
+#include <csignal>
 #endif
 #endif
 
-#include "abstractlogger.h"
-#include "src/cli/commandlineparser.h"
-#include "src/config/cacheutils.h"
-#include "src/config/styleoverride.h"
-#include "src/core/capturerequest.h"
-#include "src/core/flameshot.h"
-#include "src/core/flameshotdaemon.h"
-#include "src/utils/confighandler.h"
-#include "src/utils/filenamehandler.h"
-#include "src/utils/pathinfo.h"
-#include "src/utils/valuehandler.h"
+#include "cli/commandlineparser.h"
+#include "config/cacheutils.h"
+#include "config/styleoverride.h"
+#include "core/capturerequest.h"
+#include "core/flameshot.h"
+#include "core/flameshotdaemon.h"
+#include "utils/abstractlogger.h"
+#include "utils/confighandler.h"
+#include "utils/filenamehandler.h"
+#include "utils/pathinfo.h"
+#include "utils/valuehandler.h"
+
+#if !(defined(Q_OS_MACOS) || defined(Q_OS_WIN))
+#include "core/flameshotdbusadapter.h"
+#include <QDBusConnection>
+#include <QDBusMessage>
+#endif
+
 #include <QApplication>
 #include <QDir>
 #include <QLibraryInfo>
+#include <QNetworkProxyFactory>
 #include <QSharedMemory>
 #include <QTimer>
 #include <QTranslator>
-#if !(defined(Q_OS_MACOS) || defined(Q_OS_WIN))
-#include "src/core/flameshotdbusadapter.h"
-#include <QDBusConnection>
-#include <QDBusMessage>
-#include <desktopinfo.h>
-#endif
 
 // Required for saving button list QList<CaptureTool::Type>
 Q_DECLARE_METATYPE(QList<int>)
@@ -119,6 +121,19 @@ void configureTranslation(QTranslator& translator, QTranslator& qtTranslator)
                               QStringLiteral("Internationalization"),
                               QStringLiteral("_"),
                               path);
+            if (!foundTranslation) {
+                // Neither the exact locale nor the bare language is shipped
+                // (it_CH with only it_IT available): take any translation
+                // of the same language rather than falling back to English.
+                QString language = QLocale().name().section('_', 0, 0);
+                QStringList sameLanguage = QDir(path).entryList(
+                  { QStringLiteral("Internationalization_%1_*.qm")
+                      .arg(language) },
+                  QDir::Files);
+                foundTranslation =
+                  !sameLanguage.isEmpty() &&
+                  translator.load(sameLanguage.constFirst(), path);
+            }
         } else {
             // Load language from settings
             foundTranslation =
@@ -208,6 +223,7 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationVersion(APP_VERSION);
     QCoreApplication::setApplicationName(QStringLiteral("flameshot"));
     QCoreApplication::setOrganizationName(QStringLiteral("flameshot"));
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
 
     // no arguments, just launch Flameshot
     if (argc == 1) {
@@ -222,7 +238,8 @@ int main(int argc, char* argv[])
         auto kdsa =
           KDSingleApplication(QStringLiteral("org.flameshot.Flameshot"));
 
-        if (!kdsa.isPrimaryInstance()) {
+        if (!kdsa.isPrimaryInstance() &&
+            !ConfigHandler().allowMultipleGuiInstances()) {
             return 0; // Quit
         }
 #endif
@@ -290,8 +307,6 @@ int main(int argc, char* argv[])
       { "c", "clipboard" }, QObject::tr("Save the capture to the clipboard"));
     CommandOption pinOption("pin",
                             QObject::tr("Pin the capture to the screen"));
-    CommandOption uploadOption({ "u", "upload" },
-                               QObject::tr("Upload screenshot"));
     CommandOption delayOption({ "d", "delay" },
                               QObject::tr("Delay time in milliseconds"),
                               QStringLiteral("milliseconds"));
@@ -345,6 +360,9 @@ int main(int argc, char* argv[])
         QObject::tr("default: screen containing the cursor"),
       QObject::tr("Screen number"),
       QStringLiteral("-1"));
+    CommandOption editOption(
+      { "e", "edit" },
+      QObject::tr("Interactively select and edit the screenshot region"));
 
     // Add checkers
     auto colorChecker = [](const QString& colorCode) -> bool {
@@ -423,26 +441,21 @@ int main(int argc, char* argv[])
                         useLastRegionOption,
                         rawImageOption,
                         selectionOption,
-                        uploadOption,
                         pinOption,
                         acceptOnSelectOption },
                       guiArgument);
     parser.AddOptions({ screenNumberOption,
+                        editOption,
                         clipboardOption,
                         pathOption,
                         delayOption,
                         regionOption,
                         rawImageOption,
-                        uploadOption,
                         pinOption },
                       screenArgument);
-    parser.AddOptions({ pathOption,
-                        clipboardOption,
-                        delayOption,
-                        regionOption,
-                        rawImageOption,
-                        uploadOption },
-                      fullArgument);
+    parser.AddOptions(
+      { pathOption, clipboardOption, delayOption, rawImageOption },
+      fullArgument);
     parser.AddOptions({ autostartOption,
                         notificationOption,
                         filenameOption,
@@ -495,7 +508,6 @@ int main(int argc, char* argv[])
         bool raw = parser.isSet(rawImageOption);
         bool printGeometry = parser.isSet(selectionOption);
         bool pin = parser.isSet(pinOption);
-        bool upload = parser.isSet(uploadOption);
         bool acceptOnSelect = parser.isSet(acceptOnSelectOption);
         CaptureRequest req(CaptureRequest::GRAPHICAL_MODE, delay, path);
         if (!region.isEmpty()) {
@@ -519,17 +531,16 @@ int main(int argc, char* argv[])
         if (pin) {
             req.addTask(CaptureRequest::PIN);
         }
-        if (upload) {
-            req.addTask(CaptureRequest::UPLOAD);
-        }
         if (acceptOnSelect) {
             req.addTask(CaptureRequest::ACCEPT_ON_SELECT);
             if (!clipboard && !raw && path.isEmpty() && !printGeometry &&
-                !pin && !upload) {
+                !pin) {
                 req.addSaveTask();
             }
         }
-        return requestCaptureAndWait(req);
+        int guiExitCode = requestCaptureAndWait(req);
+        delete qApp;
+        return guiExitCode;
     } else if (parser.isSet(fullArgument)) { // FULL
         reinitializeAsQApplication(argc, argv, translator, qtTranslator);
 
@@ -539,16 +550,10 @@ int main(int argc, char* argv[])
             path = QDir(path).absolutePath();
         }
         int delay = parser.value(delayOption).toInt();
-        QString region = parser.value(regionOption);
         bool clipboard = parser.isSet(clipboardOption);
         bool raw = parser.isSet(rawImageOption);
-        bool upload = parser.isSet(uploadOption);
-        // Not a valid command
 
         CaptureRequest req(CaptureRequest::FULLSCREEN_MODE, delay);
-        if (!region.isEmpty()) {
-            req.setInitialSelection(Region().value(region).toRect());
-        }
         if (clipboard) {
             req.addTask(CaptureRequest::COPY);
         }
@@ -558,13 +563,14 @@ int main(int argc, char* argv[])
         if (raw) {
             req.addTask(CaptureRequest::PRINT_RAW);
         }
-        if (upload) {
-            req.addTask(CaptureRequest::UPLOAD);
-        }
-        if (!clipboard && path.isEmpty() && !raw && !upload) {
+        if (!clipboard && path.isEmpty() && !raw) {
             req.addSaveTask();
         }
-        return requestCaptureAndWait(req);
+        {
+            int fullExitCode = requestCaptureAndWait(req);
+            delete qApp;
+            return fullExitCode;
+        }
     } else if (parser.isSet(screenArgument)) { // SCREEN
         reinitializeAsQApplication(argc, argv, translator, qtTranslator);
 
@@ -581,9 +587,16 @@ int main(int argc, char* argv[])
         bool clipboard = parser.isSet(clipboardOption);
         bool raw = parser.isSet(rawImageOption);
         bool pin = parser.isSet(pinOption);
-        bool upload = parser.isSet(uploadOption);
+        bool edit = parser.isSet(editOption);
 
         CaptureRequest req(CaptureRequest::SCREEN_MODE, delay, screenNumber);
+        if (edit) {
+            req = CaptureRequest(CaptureRequest::GRAPHICAL_MODE, delay);
+            if (screenNumber >= 0) {
+                req.setSelectedMonitor(screenNumber);
+            }
+        }
+
         if (!region.isEmpty()) {
             if (region.startsWith("screen")) {
                 AbstractLogger::error()
@@ -606,15 +619,16 @@ int main(int argc, char* argv[])
         if (pin) {
             req.addTask(CaptureRequest::PIN);
         }
-        if (upload) {
-            req.addTask(CaptureRequest::UPLOAD);
-        }
 
-        if (!clipboard && !raw && path.isEmpty() && !pin && !upload) {
+        if (!edit && !clipboard && !raw && path.isEmpty() && !pin) {
             req.addSaveTask();
         }
 
-        return requestCaptureAndWait(req);
+        {
+            int screenExitCode = requestCaptureAndWait(req);
+            delete qApp;
+            return screenExitCode;
+        }
     } else if (parser.isSet(configArgument)) { // CONFIG
         bool autostart = parser.isSet(autostartOption);
         bool notification = parser.isSet(notificationOption);
@@ -680,6 +694,6 @@ int main(int argc, char* argv[])
         }
     }
 finish:
-
+    delete qApp;
     return 0;
 }

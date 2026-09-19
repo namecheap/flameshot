@@ -1,12 +1,15 @@
 #include "trayicon.h"
+#include "core/capturerequest.h"
+#include "core/flameshot.h"
+#include "core/flameshotdaemon.h"
+#include "core/qguiappcurrentscreen.h"
+#include "utils/confighandler.h"
+#include "utils/globalvalues.h"
 
-#include "src/core/flameshot.h"
-#include "src/core/flameshotdaemon.h"
-#include "src/utils/globalvalues.h"
-
-#include "src/utils/confighandler.h"
 #include <QApplication>
+#include <QGuiApplication>
 #include <QMenu>
+#include <QScreen>
 #include <QTimer>
 #include <QUrl>
 #include <QVersionNumber>
@@ -17,8 +20,10 @@
 
 TrayIcon::TrayIcon(QObject* parent)
   : QSystemTrayIcon(parent)
+  , m_screenMenu(nullptr)
 {
     initMenu();
+    initScreenMenu();
 
     setToolTip(QStringLiteral("Flameshot"));
 #if defined(Q_OS_MACOS)
@@ -125,8 +130,8 @@ void TrayIcon::initMenu()
     });
 #endif
     });
-    auto* launcherAction = new QAction(tr("&Open Launcher"), this);
-    connect(launcherAction,
+    m_launcherAction = new QAction(tr("&Open Launcher"), this);
+    connect(m_launcherAction,
             &QAction::triggered,
             Flameshot::instance(),
             &Flameshot::launcher);
@@ -135,9 +140,11 @@ void TrayIcon::initMenu()
             &QAction::triggered,
             Flameshot::instance(),
             &Flameshot::config);
-    auto* infoAction = new QAction(tr("&About"), this);
-    connect(
-      infoAction, &QAction::triggered, Flameshot::instance(), &Flameshot::info);
+    m_infoAction = new QAction(tr("&About"), this);
+    connect(m_infoAction,
+            &QAction::triggered,
+            Flameshot::instance(),
+            &Flameshot::info);
 
 #if !defined(DISABLE_UPDATE_CHECKER)
     m_appUpdates = new QAction(tr("Check for updates"), this);
@@ -150,10 +157,20 @@ void TrayIcon::initMenu()
             &FlameshotDaemon::newVersionAvailable,
             this,
             [this](const QVersionNumber& version) {
-                QString newVersion =
-                  tr("New version %1 is available").arg(version.toString());
-                m_appUpdates->setText(newVersion);
+                if (ConfigHandler().checkForUpdates()) {
+                    QString newVersion =
+                      tr("Download version %1").arg(version.toString());
+                    m_appUpdates->setText(newVersion);
+                    m_appUpdates->setVisible(true);
+
+                    // hack to work around menu not updating when the text /
+                    // visibility is modified Force menu refresh by removing and
+                    // re-adding the action
+                    m_menu->removeAction(m_appUpdates);
+                    m_menu->insertAction(m_infoAction, m_appUpdates);
+                }
             });
+    updateCheckUpdatesMenuVisibility();
 #endif
 
     QAction* quitAction = new QAction(tr("&Quit"), this);
@@ -174,7 +191,7 @@ void TrayIcon::initMenu()
             &Flameshot::openSavePath);
 
     m_menu->addAction(m_captureAction);
-    m_menu->addAction(launcherAction);
+    m_menu->addAction(m_launcherAction);
     m_menu->addSeparator();
 #ifdef ENABLE_IMGUR
     m_menu->addAction(recentAction);
@@ -186,7 +203,7 @@ void TrayIcon::initMenu()
 #if !defined(DISABLE_UPDATE_CHECKER)
     m_menu->addAction(m_appUpdates);
 #endif
-    m_menu->addAction(infoAction);
+    m_menu->addAction(m_infoAction);
     m_menu->addSeparator();
     m_menu->addAction(quitAction);
 }
@@ -204,17 +221,63 @@ void TrayIcon::updateCaptureActionShortcut()
 }
 
 #if !defined(DISABLE_UPDATE_CHECKER)
-void TrayIcon::enableCheckUpdatesAction(bool enable)
+void TrayIcon::updateCheckUpdatesMenuVisibility()
 {
-    if (m_appUpdates != nullptr) {
-        m_appUpdates->setVisible(enable);
-        m_appUpdates->setEnabled(enable);
+    if (m_appUpdates == nullptr) {
+        return;
     }
-    if (enable) {
-        FlameshotDaemon::instance()->getLatestAvailableVersion();
+
+    bool autoCheckEnabled = ConfigHandler().checkForUpdates();
+    if (autoCheckEnabled) {
+        // When auto-check is enabled, hide the menu item initially
+        // It will be shown when a new version is available via a callback
+        m_appUpdates->setVisible(false);
+    } else {
+        m_appUpdates->setVisible(true);
+        m_appUpdates->setText(tr("Check for updates"));
     }
 }
 #endif
+
+void TrayIcon::initScreenMenu()
+{
+#ifndef Q_OS_MACOS
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    if (screens.size() <= 1) {
+        return;
+    }
+
+    m_screenMenu = new QMenu(tr("Select Screen"));
+
+    QList<QAction*> actions = m_menu->actions();
+    int index = actions.indexOf(m_launcherAction);
+    if (index >= 0 && index + 1 < actions.size()) {
+        m_menu->insertMenu(actions[index + 1], m_screenMenu);
+    } else {
+        m_menu->addMenu(m_screenMenu);
+    }
+
+    QScreen* currentScreen = QGuiAppCurrentScreen().currentScreen();
+    int currentIndex = screens.indexOf(currentScreen);
+
+    for (int i = 0; i < screens.size(); ++i) {
+        QScreen* screen = screens[i];
+        QRect geom = screen->geometry();
+        QString screenDescription = tr("Monitor %1: %2 (%3x%4)")
+                                      .arg(i + 1)
+                                      .arg(screen->name())
+                                      .arg(geom.width())
+                                      .arg(geom.height());
+
+        QAction* screenAction = m_screenMenu->addAction(screenDescription);
+        connect(screenAction, &QAction::triggered, this, [this, i]() {
+            // Wait and hide the menu
+            QTimer::singleShot(
+              100, this, [this, i]() { startGuiCaptureOnScreen(i); });
+        });
+    }
+#endif
+}
 
 void TrayIcon::startGuiCapture()
 {
@@ -222,4 +285,11 @@ void TrayIcon::startGuiCapture()
 #if !defined(DISABLE_UPDATE_CHECKER)
     FlameshotDaemon::instance()->showUpdateNotificationIfAvailable(widget);
 #endif
+}
+
+void TrayIcon::startGuiCaptureOnScreen(int screenIndex)
+{
+    CaptureRequest req(CaptureRequest::GRAPHICAL_MODE, 400);
+    req.setSelectedMonitor(screenIndex);
+    Flameshot::instance()->requestCapture(req);
 }

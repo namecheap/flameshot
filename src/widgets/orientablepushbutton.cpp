@@ -4,6 +4,7 @@
 // Based on https://stackoverflow.com/a/53135675/964478
 
 #include "orientablepushbutton.h"
+
 #include <QPainter>
 #include <QStyleOptionButton>
 #include <QStylePainter>
@@ -38,6 +39,8 @@ void OrientablePushButton::paintEvent(QPaintEvent* event)
     Q_UNUSED(event)
 
     QStylePainter painter(this);
+    if (!painter.isActive())
+        return;
     QStyleOptionButton option;
     initStyleOption(&option);
 

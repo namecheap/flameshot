@@ -2,17 +2,16 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "configwindow.h"
-#include "abstractlogger.h"
-#include "src/config/configresolver.h"
-#include "src/config/filenameeditor.h"
-#include "src/config/generalconf.h"
-#include "src/config/shortcutswidget.h"
-#include "src/config/strftimechooserwidget.h"
-#include "src/config/visualseditor.h"
-#include "src/utils/colorutils.h"
-#include "src/utils/confighandler.h"
-#include "src/utils/globalvalues.h"
-#include "src/utils/pathinfo.h"
+#include "config/configresolver.h"
+#include "config/filenameeditor.h"
+#include "config/generalconf.h"
+#include "config/shortcutswidget.h"
+#include "config/visualseditor.h"
+#include "utils/colorutils.h"
+#include "utils/confighandler.h"
+#include "utils/globalvalues.h"
+#include "utils/pathinfo.h"
+
 #include <QApplication>
 #include <QDialogButtonBox>
 #include <QFileSystemWatcher>
@@ -33,6 +32,11 @@ ConfigWindow::ConfigWindow(QWidget* parent)
     auto* layout = new QVBoxLayout(this);
     m_tabWidget = new QTabWidget(this);
     m_tabWidget->tabBar()->setUsesScrollButtons(false);
+#if defined(Q_OS_MACOS)
+    // Fix Qt6 macOS bug where tab pane content renders behind the tab bar
+    m_tabWidget->setStyleSheet(
+      "QTabWidget::pane { border-top: 2px solid palette(mid); }");
+#endif
     layout->addWidget(m_tabWidget);
 
     setAttribute(Qt::WA_DeleteOnClose);

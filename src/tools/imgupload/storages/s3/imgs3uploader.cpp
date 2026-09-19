@@ -16,12 +16,13 @@
 //     along with Flameshot.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "imgs3uploader.h"
-#include "src/utils/confighandler.h"
-#include "src/utils/history.h"
-#include "src/utils/systemnotification.h"
-#include "src/widgets/imagelabel.h"
-#include "src/widgets/loadspinner.h"
-#include "src/widgets/notificationwidget.h"
+#include "utils/confighandler.h"
+#include "utils/history.h"
+#include "utils/systemnotification.h"
+#include "widgets/imagelabel.h"
+#include "widgets/loadspinner.h"
+#include "widgets/notificationwidget.h"
+
 #include <QApplication>
 #include <QBuffer>
 #include <QClipboard>
@@ -44,7 +45,7 @@
 #include <QVBoxLayout>
 
 #if defined(Q_OS_MACOS)
-#include "src/widgets/capture/capturewidget.h"
+#include "widgets/capture/capturewidget.h"
 #include <QWidget>
 #endif
 
@@ -93,7 +94,8 @@ void ImgS3Uploader::init(const QString& title, const QString& label)
 
     resultStatus = false;
     setWindowTitle(title);
-    setWindowIcon(QIcon(":img/app/flameshot.svg"));
+    // The icon is already set by ImgUploaderBase via GlobalValues::iconPath(),
+    // which also honours USE_MONOCHROME_ICON.
 }
 
 QNetworkProxy* ImgS3Uploader::proxy()

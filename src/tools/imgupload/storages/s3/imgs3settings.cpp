@@ -16,9 +16,10 @@
 //     along with Flameshot.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "imgs3settings.h"
-#include "src/core/flameshot.h"
+
 #include <QByteArray>
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QNetworkProxy>
@@ -95,7 +96,14 @@ void ImgS3Settings::updateConfigurationData(const QString& data)
 {
     // read remote and save to the temporary file
     QTemporaryFile file;
-    file.open();
+    if (!file.open()) {
+        // An unopened file has no name, so QSettings below would read nothing
+        // and blank out the cached credentials while stamping them as fresh
+        // for the next 24h. Keep what we already have instead.
+        qWarning() << "S3: cannot create a temporary file for the remote "
+                      "configuration, keeping the cached credentials";
+        return;
+    }
     QTextStream stream(&file);
     stream << data;
     stream.flush();

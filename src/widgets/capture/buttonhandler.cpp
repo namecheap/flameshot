@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "buttonhandler.h"
-#include "src/utils/globalvalues.h"
+#include "utils/globalvalues.h"
+
 #include <QPoint>
 #include <QScreen>
 
@@ -290,8 +291,8 @@ void ButtonHandler::expandSelection()
 
 void ButtonHandler::positionButtonsInside(int index)
 {
-    // Position the buttons at the bottom center of the main area,
-    // but inside the selection.
+    // Position the buttons in the botton-center of the main but inside of the
+    // selection.
     QRect mainArea = m_selection;
     mainArea = intersectWithAreas(mainArea);
     const int buttonsPerRow = (mainArea.width()) / (m_buttonExtendedSize);

@@ -3,19 +3,22 @@
 
 #pragma once
 
-#include "src/core/capturerequest.h"
+#include "core/capturerequest.h"
+#include "widgets/capture/capturewidget.h"
+
 #include <QObject>
 #include <QPointer>
 #include <QVersionNumber>
+#include <QWindow>
 
-class CaptureWidget;
 class ConfigWindow;
 class InfoWindow;
 class CaptureLauncher;
+class QWidget;
 #ifdef ENABLE_IMGUR
 class UploadHistory;
 #endif
-#if (defined(Q_OS_MAC) || defined(Q_OS_MACOS))
+#if (defined(Q_OS_MACOS) || defined(Q_OS_WIN))
 class QHotkey;
 #endif
 
@@ -90,8 +93,19 @@ private:
     QPointer<CaptureLauncher> m_launcherWindow;
     QPointer<ConfigWindow> m_configWindow;
 
-#if (defined(Q_OS_MAC) || defined(Q_OS_MACOS))
+#if defined(Q_OS_MACOS)
+public:
+    void showDockIcon(QWidget* window);
+
+private:
+    void onWindowVisibilityChanged(QWindow::Visibility newVisibility);
+    int m_dockIconVisibleCount = 0;
+#endif
+
+#if (defined(Q_OS_MACOS) || defined(Q_OS_WIN))
     QHotkey* m_HotkeyScreenshotCapture;
+#endif
+#if (defined(Q_OS_MACOS) && ENABLE_IMGUR)
     QHotkey* m_HotkeyScreenshotHistory;
 #endif
 };
