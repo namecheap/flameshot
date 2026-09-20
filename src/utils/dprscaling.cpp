@@ -36,4 +36,15 @@ QRect toDevicePixels(const QRect& logical, qreal dpr)
     return { left, top, right - left, bottom - top };
 }
 
+int toDevicePixels(qreal logical, qreal dpr)
+{
+    return qRound(logical * dpr);
+}
+
+QPoint toPixmapPoint(const QPoint& global, const QPoint& origin, qreal dpr)
+{
+    return { qRound((global.x() - origin.x()) * dpr),
+             qRound((global.y() - origin.y()) * dpr) };
+}
+
 } // namespace DprScaling

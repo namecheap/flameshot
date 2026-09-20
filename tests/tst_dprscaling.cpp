@@ -20,6 +20,12 @@ private slots:
     void toDevicePixels();
     void toDevicePixels_wholeRatiosScaleOriginAndExtentDirectly();
     void toDevicePixels_adjacentRectsShareAnEdge();
+
+    void toPixmapPoint_data();
+    void toPixmapPoint();
+
+    void toDevicePixelsLength_data();
+    void toDevicePixelsLength();
 };
 
 void TestDprScaling::fitCrop_data()
@@ -160,6 +166,76 @@ void TestDprScaling::toDevicePixels_adjacentRectsShareAnEdge()
 
         QCOMPARE(scaledLeft.left() + scaledLeft.width(), scaledRight.left());
     }
+}
+
+void TestDprScaling::toPixmapPoint_data()
+{
+    QTest::addColumn<QPoint>("global");
+    QTest::addColumn<QPoint>("origin");
+    QTest::addColumn<qreal>("dpr");
+    QTest::addColumn<QPoint>("expected");
+
+    QTest::newRow("primary monitor unscaled")
+      << QPoint(100, 200) << QPoint(0, 0) << qreal(1.0) << QPoint(100, 200);
+
+    // DP-1 sits at x=1920 and its capture is 1.5x its logical size, so both the
+    // offset and the ratio have to be applied.
+    QTest::newRow("offset monitor at fractional ratio")
+      << QPoint(2000, 100) << QPoint(1920, 0) << qreal(1.5) << QPoint(120, 150);
+
+    // eDP-1 starts 360 below the top of the desktop.
+    QTest::newRow("offset monitor unscaled")
+      << QPoint(100, 800) << QPoint(0, 360) << qreal(1.0) << QPoint(100, 440);
+
+    QTest::newRow("whole ratio")
+      << QPoint(1930, 5) << QPoint(1920, 0) << qreal(2.0) << QPoint(20, 10);
+
+    QTest::newRow("top-left corner maps to the origin")
+      << QPoint(1920, 0) << QPoint(1920, 0) << qreal(1.5) << QPoint(0, 0);
+
+    QTest::newRow("fractional ratio rounds")
+      << QPoint(1921, 1) << QPoint(1920, 0) << qreal(1.5) << QPoint(2, 2);
+}
+
+void TestDprScaling::toPixmapPoint()
+{
+    QFETCH(QPoint, global);
+    QFETCH(QPoint, origin);
+    QFETCH(qreal, dpr);
+    QFETCH(QPoint, expected);
+
+    QCOMPARE(DprScaling::toPixmapPoint(global, origin, dpr), expected);
+}
+
+void TestDprScaling::toDevicePixelsLength_data()
+{
+    QTest::addColumn<qreal>("logical");
+    QTest::addColumn<qreal>("dpr");
+    QTest::addColumn<int>("expected");
+
+    // The magnifier covers a count of logical pixels, so the number of
+    // captured pixels behind it varies with each display's scale.
+    QTest::newRow("unscaled") << qreal(7) << qreal(1.0) << 7;
+    QTest::newRow("fractional rounds up") << qreal(7) << qreal(1.5) << 11;
+    QTest::newRow("larger magnifier at fractional")
+      << qreal(11) << qreal(1.5) << 17;
+    QTest::newRow("whole ratio") << qreal(7) << qreal(2.0) << 14;
+    QTest::newRow("zero stays zero") << qreal(0) << qreal(1.5) << 0;
+
+    // Dividing the magnifier's span by a display's rendering scale leaves a
+    // fraction of a logical pixel, which must survive to the conversion:
+    // rounding it away first loses a captured pixel.
+    QTest::newRow("fractional length is not truncated")
+      << qreal(3.5) << qreal(2.0) << 7;
+}
+
+void TestDprScaling::toDevicePixelsLength()
+{
+    QFETCH(qreal, logical);
+    QFETCH(qreal, dpr);
+    QFETCH(int, expected);
+
+    QCOMPARE(DprScaling::toDevicePixels(logical, dpr), expected);
 }
 
 QTEST_APPLESS_MAIN(TestDprScaling)

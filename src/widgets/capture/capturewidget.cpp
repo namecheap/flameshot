@@ -1338,7 +1338,19 @@ void CaptureWidget::initPanel()
             this,
             &CaptureWidget::onMoveCaptureToolDown);
 
-    m_sidePanel = new SidePanelWidget(&m_context.screenshot, this);
+    // This widget covers exactly the area the screenshot was taken from, so its
+    // own top-left is that area's origin on the desktop. Looked up by geometry
+    // rather than through screen(), which runs before the window exists here
+    // and can answer with the primary display instead of this one.
+    const QPoint captureOrigin = geometry().topLeft();
+    const QScreen* captureScreen = QGuiApplication::screenAt(captureOrigin);
+    // The rendering density sets how far the magnifier zooms; it is not how the
+    // capture is sampled, which follows the pixmap's own ratio.
+    const qreal displayScale =
+      captureScreen != nullptr ? captureScreen->devicePixelRatio() : qreal(1.0);
+
+    m_sidePanel = new SidePanelWidget(
+      &m_context.screenshot, captureOrigin, displayScale, this);
     connect(m_sidePanel,
             &SidePanelWidget::colorChanged,
             this,
