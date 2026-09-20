@@ -15,6 +15,7 @@ target_sources(
           filenamehandler.cpp
           screengrabber.cpp
           monitorfocus.cpp
+          dprscaling.cpp
           monitorpreview.cpp
           confighandler.cpp
           systemnotification.cpp
