@@ -15,6 +15,11 @@ private slots:
     void fitCrop();
     void fitCrop_neverEnlarges();
     void fitCrop_degenerateLogicalSize();
+
+    void toDevicePixels_data();
+    void toDevicePixels();
+    void toDevicePixels_wholeRatiosScaleOriginAndExtentDirectly();
+    void toDevicePixels_adjacentRectsShareAnEdge();
 };
 
 void TestDprScaling::fitCrop_data()
@@ -91,6 +96,70 @@ void TestDprScaling::fitCrop_degenerateLogicalSize()
     // A zero logical width would divide by zero when deriving the ratio.
     const Fit fit = DprScaling::fitCrop(QSize(0, 0), QSize(0, 0), qreal(2.0));
     QCOMPARE(fit.dpr, qreal(2.0));
+}
+
+void TestDprScaling::toDevicePixels_data()
+{
+    QTest::addColumn<QRect>("logical");
+    QTest::addColumn<qreal>("dpr");
+    QTest::addColumn<QRect>("expected");
+
+    QTest::newRow("unscaled is identity")
+      << QRect(100, 50, 300, 200) << qreal(1.0) << QRect(100, 50, 300, 200);
+
+    QTest::newRow("whole ratio doubles everything")
+      << QRect(100, 50, 300, 200) << qreal(2.0) << QRect(200, 100, 600, 400);
+
+    // 301 * 1.5 = 451.5. Scaling the extent on its own truncates to 451, while
+    // the far edge at 401 * 1.5 = 601.5 rounds to 602 -- so the rectangle must
+    // be 452 wide to reach it.
+    QTest::newRow("fractional ratio keeps the far edge")
+      << QRect(100, 50, 301, 201) << qreal(1.5) << QRect(150, 75, 452, 302);
+
+    QTest::newRow("origin at zero")
+      << QRect(0, 0, 101, 101) << qreal(1.5) << QRect(0, 0, 152, 152);
+
+    QTest::newRow("empty rect stays empty")
+      << QRect(10, 10, 0, 0) << qreal(1.5) << QRect(15, 15, 0, 0);
+}
+
+void TestDprScaling::toDevicePixels()
+{
+    QFETCH(QRect, logical);
+    QFETCH(qreal, dpr);
+    QFETCH(QRect, expected);
+
+    QCOMPARE(DprScaling::toDevicePixels(logical, dpr), expected);
+}
+
+/// The compatibility guarantee: on displays that report a whole-number ratio
+/// this must agree with scaling origin and extent directly, so nothing changes
+/// where nothing was broken.
+void TestDprScaling::toDevicePixels_wholeRatiosScaleOriginAndExtentDirectly()
+{
+    const QRect logical(37, 91, 613, 227);
+    for (int dpr = 1; dpr <= 4; ++dpr) {
+        const QRect expected(logical.left() * dpr,
+                             logical.top() * dpr,
+                             logical.width() * dpr,
+                             logical.height() * dpr);
+        QCOMPARE(DprScaling::toDevicePixels(logical, qreal(dpr)), expected);
+    }
+}
+
+/// Why edges are scaled rather than extents: rectangles that touched in
+/// logical space must still touch afterwards, with no seam and no overlap.
+void TestDprScaling::toDevicePixels_adjacentRectsShareAnEdge()
+{
+    for (int split = 1; split < 200; ++split) {
+        const QRect left(0, 0, split, 50);
+        const QRect right(split, 0, 200 - split, 50);
+
+        const QRect scaledLeft = DprScaling::toDevicePixels(left, qreal(1.5));
+        const QRect scaledRight = DprScaling::toDevicePixels(right, qreal(1.5));
+
+        QCOMPARE(scaledLeft.left() + scaledLeft.width(), scaledRight.left());
+    }
 }
 
 QTEST_APPLESS_MAIN(TestDprScaling)

@@ -24,4 +24,16 @@ Fit fitCrop(const QSize& cropped, const QSize& logical, qreal reportedDpr)
     return { size, qreal(size.width()) / logical.width() };
 }
 
+QRect toDevicePixels(const QRect& logical, qreal dpr)
+{
+    // width() is the distance to the exclusive far edge, so scaling that edge
+    // and subtracting gives an extent that always reaches it.
+    const int left = qRound(logical.left() * dpr);
+    const int top = qRound(logical.top() * dpr);
+    const int right = qRound((logical.left() + logical.width()) * dpr);
+    const int bottom = qRound((logical.top() + logical.height()) * dpr);
+
+    return { left, top, right - left, bottom - top };
+}
+
 } // namespace DprScaling
