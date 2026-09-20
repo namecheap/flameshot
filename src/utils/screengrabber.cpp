@@ -772,8 +772,8 @@ QPixmap ScreenGrabber::cropToMonitor(const QPixmap& fullScreenshot,
     // The portal composites every monitor at one scale, which need not be the
     // one Qt reports for this monitor. Keep the pixels it captured rather than
     // stretching them to match that figure.
-    const DprScaling::Fit fit = DprScaling::fitCrop(
-      cropped.size(), targetGeometry.size(), targetDpr);
+    const DprScaling::Fit fit =
+      DprScaling::fitCrop(cropped.size(), targetGeometry.size(), targetDpr);
 
     if (fit.size != cropped.size()) {
         cropped = cropped.scaled(

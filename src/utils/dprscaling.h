@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <QPoint>
 #include <QRect>
 #include <QSize>
 
@@ -39,5 +40,17 @@ Fit fitCrop(const QSize& cropped, const QSize& logical, qreal reportedDpr);
 /// rectangles that were adjacent. At whole-number ratios this is exactly
 /// origin and extent scaled directly.
 QRect toDevicePixels(const QRect& logical, qreal dpr);
+
+/// A logical length in device pixels. Takes a real length because callers
+/// divide by a display's scale first, which rarely lands on a whole number.
+int toDevicePixels(qreal logical, qreal dpr);
+
+/// Where a point on the desktop falls inside one monitor's capture.
+///
+/// @param global logical position in desktop coordinates
+/// @param origin logical top-left of the monitor the capture came from
+/// @param dpr    ratio of the capture, not of the screen: the two disagree
+///               wherever a compositor scales fractionally
+QPoint toPixmapPoint(const QPoint& global, const QPoint& origin, qreal dpr);
 
 } // namespace DprScaling
