@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <QRect>
 #include <QSize>
 
 /// Arithmetic reconciling the scale factors a capture passes through: the
@@ -29,5 +30,14 @@ struct Fit
 /// monitor's real pixels. The returned ratio describes the pixels that remain,
 /// so the crop keeps its logical size either way.
 Fit fitCrop(const QSize& cropped, const QSize& logical, qreal reportedDpr);
+
+/// A logical rectangle in device pixels.
+///
+/// Scales the edges and derives the extent from them, rather than scaling
+/// origin and extent apart: done separately the two round independently and the
+/// far edge drifts by a pixel, which at fractional ratios leaves gaps between
+/// rectangles that were adjacent. At whole-number ratios this is exactly
+/// origin and extent scaled directly.
+QRect toDevicePixels(const QRect& logical, qreal dpr);
 
 } // namespace DprScaling

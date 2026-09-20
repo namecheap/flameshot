@@ -16,6 +16,7 @@
 #include "core/qguiappcurrentscreen.h"
 #include "tools/copy/copytool.h"
 #include "utils/abstractlogger.h"
+#include "utils/dprscaling.h"
 #include "utils/screengrabber.h"
 #include "utils/screenshotsaver.h"
 #include "widgets/capture/colorpicker.h"
@@ -2121,11 +2122,8 @@ QRect CaptureWidget::extendedSelection() const
 
 QRect CaptureWidget::extendedRect(const QRect& r) const
 {
-    auto devicePixelRatio = m_context.screenshot.devicePixelRatio();
-    return { static_cast<int>(r.left() * devicePixelRatio),
-             static_cast<int>(r.top() * devicePixelRatio),
-             static_cast<int>(r.width() * devicePixelRatio),
-             static_cast<int>(r.height() * devicePixelRatio) };
+    return DprScaling::toDevicePixels(r,
+                                      m_context.screenshot.devicePixelRatio());
 }
 
 QRect CaptureWidget::paddedUpdateRect(const QRect& r) const
