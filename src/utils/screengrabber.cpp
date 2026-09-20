@@ -3,6 +3,7 @@
 #include "core/qguiappcurrentscreen.h"
 #include "utils/abstractlogger.h"
 #include "utils/confighandler.h"
+#include "utils/dprscaling.h"
 #include "utils/monitorpreview.h"
 #include "utils/systemnotification.h"
 
@@ -768,23 +769,26 @@ QPixmap ScreenGrabber::cropToMonitor(const QPixmap& fullScreenshot,
     QPixmap cropped = fullScreenshot.copy(cropRect);
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
-    // Linux: May need rescaling if scale factors don't match
-    if (qAbs(screenshotScaleX - targetDpr) > 0.01) {
-        int targetPhysicalWidth = qRound(targetGeometry.width() * targetDpr);
-        int targetPhysicalHeight = qRound(targetGeometry.height() * targetDpr);
-        cropped = cropped.scaled(targetPhysicalWidth,
-                                 targetPhysicalHeight,
-                                 Qt::IgnoreAspectRatio,
-                                 Qt::SmoothTransformation);
+    // The portal composites every monitor at one scale, which need not be the
+    // one Qt reports for this monitor. Keep the pixels it captured rather than
+    // stretching them to match that figure.
+    const DprScaling::Fit fit = DprScaling::fitCrop(
+      cropped.size(), targetGeometry.size(), targetDpr);
+
+    if (fit.size != cropped.size()) {
+        cropped = cropped.scaled(
+          fit.size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 #ifdef FLAMESHOT_DEBUG_CAPTURE
         qDebug() << tr("Scaling screenshot to: %1 %2")
-                      .arg(targetPhysicalWidth)
-                      .arg(targetPhysicalHeight);
+                      .arg(fit.size.width())
+                      .arg(fit.size.height());
 #endif
     }
-#endif
+    cropped.setDevicePixelRatio(fit.dpr);
+#else
     // Cropped region should be at target monitor's native DPR
     cropped.setDevicePixelRatio(targetDpr);
+#endif
 
     return cropped;
 }
