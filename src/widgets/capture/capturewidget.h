@@ -73,6 +73,15 @@ public:
     void setArmed(bool armed);
     bool isArmed() const { return m_armed; }
 
+    /// Make this widget's shortcuts fire from any window of the application
+    /// when @p active, and not at all otherwise. Wayland keeps keyboard focus
+    /// on whichever display had it, so keys must reach the armed one some
+    /// other way. Exactly one widget may be active: two application-wide
+    /// copies of a key are ambiguous and neither fires.
+    void setSharedShortcutsActive(bool active);
+    /// Back to shortcuts that fire only while this window has focus.
+    void restoreWindowShortcuts();
+
 public slots:
     bool commitCurrentTool();
     void deleteToolWidgetOrClose();

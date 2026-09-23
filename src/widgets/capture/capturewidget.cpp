@@ -349,6 +349,24 @@ void CaptureWidget::discardSilently()
     m_discardSilently = true;
 }
 
+void CaptureWidget::setSharedShortcutsActive(bool active)
+{
+    for (auto* shortcut :
+         findChildren<QShortcut*>(Qt::FindDirectChildrenOnly)) {
+        shortcut->setContext(Qt::ApplicationShortcut);
+        shortcut->setEnabled(active);
+    }
+}
+
+void CaptureWidget::restoreWindowShortcuts()
+{
+    for (auto* shortcut :
+         findChildren<QShortcut*>(Qt::FindDirectChildrenOnly)) {
+        shortcut->setContext(Qt::WindowShortcut);
+        shortcut->setEnabled(true);
+    }
+}
+
 void CaptureWidget::setArmed(bool armed)
 {
     if (m_armed == armed) {

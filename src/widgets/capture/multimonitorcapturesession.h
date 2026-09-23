@@ -33,6 +33,9 @@ public:
 
     CaptureWidget* armedWidget() const;
 
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 signals:
     /// The armed display changed; the argument may be null.
     void armedChanged(CaptureWidget* armed);

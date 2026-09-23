@@ -6,6 +6,7 @@
 #include "utils/screengrabber.h"
 #include "widgets/capture/capturewidget.h"
 
+#include <QCoreApplication>
 #include <QCursor>
 #include <QGuiApplication>
 #include <QScreen>
@@ -65,6 +66,7 @@ bool MultiMonitorCaptureSession::start(const CaptureRequest& request)
                     &QObject::destroyed,
                     this,
                     &MultiMonitorCaptureSession::handleWidgetDestroyed);
+            widget->installEventFilter(this);
 
 #if defined(Q_OS_WIN)
             widget->show();
@@ -115,6 +117,22 @@ void MultiMonitorCaptureSession::handlePointerEntered(int monitorIndex)
     emit armedChanged(armedWidget());
 }
 
+bool MultiMonitorCaptureSession::eventFilter(QObject* watched, QEvent* event)
+{
+    // Keys that are not shortcuts land in whichever window has keyboard focus,
+    // which need not be the armed one; hand them over until the user commits.
+    if ((event->type() == QEvent::KeyPress ||
+         event->type() == QEvent::KeyRelease) &&
+        !m_tracker.isLatched()) {
+        CaptureWidget* armed = armedWidget();
+        if (armed && watched != armed) {
+            QCoreApplication::sendEvent(armed, event);
+            return true;
+        }
+    }
+    return QObject::eventFilter(watched, event);
+}
+
 void MultiMonitorCaptureSession::handleEditingStarted(int monitorIndex)
 {
     if (m_tracker.isLatched()) {
@@ -127,6 +145,12 @@ void MultiMonitorCaptureSession::handleEditingStarted(int monitorIndex)
     }
     applyArmedState();
     discardAllExcept(m_tracker.activeMonitor());
+    // The click that latched gave this window real keyboard focus, so it no
+    // longer needs keys from elsewhere; application-wide shortcuts would now
+    // only steal keys from other Flameshot windows, such as pins.
+    if (CaptureWidget* kept = armedWidget()) {
+        kept->restoreWindowShortcuts();
+    }
     emit latched(armedWidget());
 }
 
@@ -136,6 +160,11 @@ void MultiMonitorCaptureSession::applyArmedState()
     for (int i = 0; i < m_widgets.size(); ++i) {
         if (m_widgets.at(i)) {
             m_widgets.at(i)->setArmed(i == active);
+            // Until a display is armed the shortcuts keep their per-window
+            // behaviour, so Esc still works from the focused one.
+            if (active >= 0) {
+                m_widgets.at(i)->setSharedShortcutsActive(i == active);
+            }
         }
     }
 }
