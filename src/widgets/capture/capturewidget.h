@@ -266,9 +266,8 @@ private:
     QPoint m_startMovePos;
     bool m_startMove;
 
-    // Resize handle being dragged and the object's box when the drag began
+    // Resize handle being dragged
     ResizeHandles::Handle m_resizeHandle{ ResizeHandles::None };
-    QRect m_resizeStartRect;
 
     // Grid
     bool m_displayGrid{ false };

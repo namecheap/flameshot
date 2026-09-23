@@ -999,7 +999,7 @@ void CaptureWidget::mousePressEvent(QMouseEvent* e)
         m_resizeHandle = resizeHandleAt(e->pos());
         if (m_resizeHandle != ResizeHandles::None) {
             m_mouseIsClicked = true;
-            m_resizeStartRect = activeToolObject()->resizableRect();
+            activeToolObject()->beginHandleDrag(m_resizeHandle);
             m_captureToolObjectsBackup = m_captureToolObjects;
             updateCursor();
             return;
@@ -1094,10 +1094,8 @@ void CaptureWidget::mouseMoveEvent(QMouseEvent* e)
     if (m_resizeHandle != ResizeHandles::None) {
         auto activeTool = activeToolObject();
         update(paddedUpdateRect(activeTool->boundingRect()));
-        activeTool->setResizableRect(ResizeHandles::resized(
-          m_resizeStartRect,
-          m_resizeHandle,
-          m_displayGrid ? snapToGrid(e->pos()) : e->pos()));
+        activeTool->dragHandle(m_displayGrid ? snapToGrid(e->pos()) : e->pos());
+        m_activeToolIsMoved = true;
         drawToolsData();
     } else if (!m_activeButton && m_panel->activeLayerIndex() >= 0) {
         // Move existing object
@@ -1170,8 +1168,7 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
             m_panel->show();
         }
     } else if (m_mouseIsClicked && m_resizeHandle != ResizeHandles::None) {
-        auto activeTool = activeToolObject();
-        if (activeTool && activeTool->resizableRect() != m_resizeStartRect) {
+        if (m_activeToolIsMoved) {
             pushObjectsStateToUndoStack();
         } else {
             m_captureToolObjectsBackup.clear();
@@ -1910,35 +1907,39 @@ ResizeHandles::Handle CaptureWidget::resizeHandleAt(const QPoint& pos)
         return ResizeHandles::None;
     }
     const int tolerance = 8;
-    return ResizeHandles::handleAt(toolItem->resizableRect(), pos, tolerance);
+    return toolItem->handleAt(pos, tolerance);
 }
 
 void CaptureWidget::updateCursor()
 {
     // m_context.mousePos rather than QCursor::pos(): Wayland gives a client
     // no global cursor position.
-    auto handle = m_resizeHandle != ResizeHandles::None
-                    ? m_resizeHandle
-                    : resizeHandleAt(m_context.mousePos);
+    std::optional<Qt::CursorShape> objectCursor;
+    auto toolItem = activeToolObject();
+    const bool objectSelected =
+      !m_activeButton && toolItem && !toolItem->editMode();
+    if (objectSelected) {
+        auto handle = m_resizeHandle != ResizeHandles::None
+                        ? m_resizeHandle
+                        : resizeHandleAt(m_context.mousePos);
+        objectCursor = ResizeHandles::objectCursor(
+          handle,
+          m_activeToolIsMoved,
+          toolItem->boundingRect().contains(m_context.mousePos));
+    }
     if (m_colorPicker && m_colorPicker->isVisible()) {
         setCursor(Qt::ArrowCursor);
-    } else if (handle == ResizeHandles::TopLeft ||
-               handle == ResizeHandles::BottomRight) {
-        setCursor(Qt::SizeFDiagCursor);
-    } else if (handle == ResizeHandles::TopRight ||
-               handle == ResizeHandles::BottomLeft) {
-        setCursor(Qt::SizeBDiagCursor);
-    } else if (handle == ResizeHandles::Left ||
-               handle == ResizeHandles::Right) {
-        setCursor(Qt::SizeHorCursor);
-    } else if (handle == ResizeHandles::Top ||
-               handle == ResizeHandles::Bottom) {
-        setCursor(Qt::SizeVerCursor);
+    } else if (objectCursor) {
+        setCursor(*objectCursor);
     } else if (m_activeButton != nullptr &&
                activeButtonToolType() != CaptureTool::TYPE_MOVESELECTION) {
         setCursor(Qt::CrossCursor);
-    } else if (m_selection->getMouseSide(mapFromGlobal(QCursor::pos())) !=
-               SelectionWidget::NO_SIDE) {
+    } else if (!objectSelected &&
+               m_selection->getMouseSide(mapFromGlobal(QCursor::pos())) !=
+                 SelectionWidget::NO_SIDE) {
+        // While an object is selected the selection ignores the mouse and
+        // unsets its cursor; cursor() would then return this widget's own,
+        // freezing whatever was last shown.
         setCursor(m_selection->cursor());
     } else if (activeButtonToolType() == CaptureTool::TYPE_MOVESELECTION) {
         setCursor(Qt::OpenHandCursor);
