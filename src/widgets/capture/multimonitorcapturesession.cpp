@@ -156,7 +156,7 @@ void MultiMonitorCaptureSession::discardAllExcept(int keepIndex)
     m_tearingDown = false;
 }
 
-void MultiMonitorCaptureSession::handleWidgetDestroyed()
+void MultiMonitorCaptureSession::handleWidgetDestroyed(QObject* dying)
 {
     if (m_tearingDown) {
         return;
@@ -169,9 +169,11 @@ void MultiMonitorCaptureSession::handleWidgetDestroyed()
         discardAllExcept(-1);
     }
 
+    // A widget emits destroyed() from ~QWidget, before its QPointer is
+    // cleared, so the dying one still looks alive here.
     bool anyLeft = false;
     for (const auto& widget : m_widgets) {
-        if (widget) {
+        if (widget && widget != dying) {
             anyLeft = true;
             break;
         }

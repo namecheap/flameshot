@@ -147,7 +147,9 @@ CaptureWidget* Flameshot::gui(const CaptureRequest& req)
     }
 #endif
 
-    if (nullptr == m_captureWindow) {
+    // A multi-display session has no single window until a display is armed,
+    // and loses the one it had when another display is latched.
+    if (nullptr == m_captureWindow && nullptr == m_captureSession) {
         // TODO is this unnecessary now?
         int timeout = 5000; // 5 seconds
         const int delay = 100;
