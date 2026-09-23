@@ -2,8 +2,13 @@
 
 #pragma once
 
+#include <QPair>
 #include <QPoint>
 #include <QRect>
+#include <QVector>
+#include <Qt>
+
+#include <optional>
 
 /// Geometry of the eight handles shown on a selected box-shaped object: four
 /// corners and four edge midpoints. QtCore only, so it is unit-testable
@@ -20,7 +25,10 @@ enum Handle
     BottomRight,
     Bottom,
     BottomLeft,
-    Left
+    Left,
+    // Ends of a line-shaped object
+    Start,
+    End
 };
 
 QPoint handleCenter(const QRect& box, Handle handle);
@@ -33,5 +41,34 @@ Handle handleAt(const QRect& box, const QPoint& pos, int tolerance);
 /// opposite ones staying put. Dragging past the opposite side flips the box.
 /// Opposite edges never coincide, so the result always spans two points.
 QRect resized(const QRect& start, Handle handle, const QPoint& pos);
+
+/// Start or End if within @p tolerance of that end, the nearer one when both
+/// are; None otherwise.
+Handle endpointAt(const QPoint& first,
+                  const QPoint& second,
+                  const QPoint& pos,
+                  int tolerance);
+
+/// The line with the end @p handle names moved to @p pos. An end dropped on
+/// the other one is kept a pixel away, so the line stays valid.
+QPair<QPoint, QPoint> movedEndpoint(const QPoint& first,
+                                    const QPoint& second,
+                                    Handle handle,
+                                    const QPoint& pos);
+
+/// @p points, whose bounds are @p box, scaled to follow @p box's @p handle
+/// dragged to @p pos. Dragging past the opposite side mirrors them; an axis
+/// with no extent to scale is left alone.
+QVector<QPoint> stretched(const QVector<QPoint>& points,
+                          const QRect& box,
+                          Handle handle,
+                          const QPoint& pos);
+
+/// Cursor for a selected object: a resize cursor over @p handle (hovered or
+/// being dragged), a hand while @p movingObject or over the object. Empty
+/// when none of these apply.
+std::optional<Qt::CursorShape> objectCursor(Handle handle,
+                                            bool movingObject,
+                                            bool overObject);
 
 }
