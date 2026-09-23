@@ -42,7 +42,7 @@ signals:
 private:
     void handlePointerEntered(int monitorIndex);
     void handleEditingStarted(int monitorIndex);
-    void handleWidgetDestroyed();
+    void handleWidgetDestroyed(QObject* dying);
     void applyArmedState();
     void discardAllExcept(int keepIndex);
 
