@@ -212,6 +212,8 @@ private:
     bool m_configErrorResolved;
     bool m_discardSilently = false;
     bool m_armed = true;
+    // The selection was hidden by un-arming and is shown again on arming.
+    bool m_selectionHiddenWhileUnarmed = false;
     int m_armedOpacity = 0;
     // This widget's own overlay, and the "Tool Settings" toggle, both hidden
     // while the display is unarmed.

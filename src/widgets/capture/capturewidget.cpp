@@ -38,6 +38,7 @@
 #include <QPainter>
 #include <QScreen>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QWindow>
 
 #if !defined(DISABLE_UPDATE_CHECKER)
@@ -389,6 +390,19 @@ void CaptureWidget::setArmed(bool armed)
     if (m_panelToggleButton) {
         m_panelToggleButton->setVisible(armed);
     }
+    if (m_selection) {
+        // Signals blocked: visibilityChanged would push the help message onto
+        // the shared overlay, which may belong to another display.
+        const QSignalBlocker blocker(m_selection);
+        if (!armed && m_selection->isVisibleTo(this)) {
+            m_selection->hide();
+            m_selectionHiddenWhileUnarmed = true;
+        } else if (armed && m_selectionHiddenWhileUnarmed) {
+            m_selection->show();
+            m_selectionHiddenWhileUnarmed = false;
+        }
+    }
+
     if (!armed) {
         if (m_panel) {
             m_panel->hide();
