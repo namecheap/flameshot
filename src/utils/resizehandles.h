@@ -31,6 +31,9 @@ enum Handle
     End
 };
 
+/// The box with @p first and @p second as opposite corners, in either order.
+QRect boxOf(const QPoint& first, const QPoint& second);
+
 QPoint handleCenter(const QRect& box, Handle handle);
 
 /// The handle within @p tolerance of @p pos, or None. Corners win over edges
