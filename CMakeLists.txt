@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 # cmake_policy(SET CMP0076 OLD)
 
-set(FLAMESHOT_VERSION 15.0.0.1)
+set(FLAMESHOT_VERSION 15.0.0.2)
 
 # Namecheap fork
 set(GIT_API_URL "https://api.github.com/repos/namecheap/flameshot/releases/latest")
@@ -150,6 +150,14 @@ if(WIN32 OR APPLE)
 endif()
 
 add_subdirectory(src)
+
+# Named FLAMESHOT_BUILD_TESTS rather than BUILD_TESTING, which belongs to
+# CMake's own CTest module. Off by default so packagers are unaffected.
+option(FLAMESHOT_BUILD_TESTS "Build unit tests" OFF)
+if(FLAMESHOT_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
 # CPack
 set(CPACK_PACKAGE_VENDOR "flameshot-org")
