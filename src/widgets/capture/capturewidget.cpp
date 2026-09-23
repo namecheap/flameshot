@@ -999,7 +999,8 @@ void CaptureWidget::mousePressEvent(QMouseEvent* e)
         m_resizeHandle = resizeHandleAt(e->pos());
         if (m_resizeHandle != ResizeHandles::None) {
             m_mouseIsClicked = true;
-            activeToolObject()->beginHandleDrag(m_resizeHandle);
+            m_resizeTool = activeToolObject();
+            m_resizeTool->beginHandleDrag(m_resizeHandle);
             m_captureToolObjectsBackup = m_captureToolObjects;
             updateCursor();
             return;
@@ -1092,11 +1093,16 @@ void CaptureWidget::mouseMoveEvent(QMouseEvent* e)
 
     // The rest assumes that left mouse button is clicked
     if (m_resizeHandle != ResizeHandles::None) {
-        auto activeTool = activeToolObject();
-        update(paddedUpdateRect(activeTool->boundingRect()));
-        activeTool->dragHandle(m_displayGrid ? snapToGrid(e->pos()) : e->pos());
-        m_activeToolIsMoved = true;
-        drawToolsData();
+        if (m_resizeTool && m_resizeTool == activeToolObject()) {
+            update(paddedUpdateRect(m_resizeTool->boundingRect()));
+            m_resizeTool->dragHandle(m_displayGrid ? snapToGrid(e->pos())
+                                                   : e->pos());
+            m_activeToolIsMoved = true;
+            drawToolsData();
+        } else {
+            m_resizeTool = nullptr;
+            m_activeToolIsMoved = false;
+        }
     } else if (!m_activeButton && m_panel->activeLayerIndex() >= 0) {
         // Move existing object
         if (!m_startMove) {
@@ -1168,7 +1174,8 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
             m_panel->show();
         }
     } else if (m_mouseIsClicked && m_resizeHandle != ResizeHandles::None) {
-        if (m_activeToolIsMoved) {
+        if (m_resizeTool && m_resizeTool == activeToolObject() &&
+            m_activeToolIsMoved) {
             pushObjectsStateToUndoStack();
         } else {
             m_captureToolObjectsBackup.clear();
@@ -1192,6 +1199,7 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
     m_mouseIsClicked = false;
     m_activeToolIsMoved = false;
     m_resizeHandle = ResizeHandles::None;
+    m_resizeTool = nullptr;
 
     updateSelectionState();
     updateCursor();
@@ -1919,9 +1927,8 @@ void CaptureWidget::updateCursor()
     const bool objectSelected =
       !m_activeButton && toolItem && !toolItem->editMode();
     if (objectSelected) {
-        auto handle = m_resizeHandle != ResizeHandles::None
-                        ? m_resizeHandle
-                        : resizeHandleAt(m_context.mousePos);
+        auto handle =
+          m_resizeTool ? m_resizeHandle : resizeHandleAt(m_context.mousePos);
         objectCursor = ResizeHandles::objectCursor(
           handle,
           m_activeToolIsMoved,

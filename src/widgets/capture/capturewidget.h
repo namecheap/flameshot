@@ -266,8 +266,11 @@ private:
     QPoint m_startMovePos;
     bool m_startMove;
 
-    // Resize handle being dragged
+    // Resize handle being dragged, and the object it belongs to. Delete or
+    // undo mid-drag replaces the object; the drag then stays cancelled until
+    // the button is released.
     ResizeHandles::Handle m_resizeHandle{ ResizeHandles::None };
+    QPointer<CaptureTool> m_resizeTool;
 
     // Grid
     bool m_displayGrid{ false };
