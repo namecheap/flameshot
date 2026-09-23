@@ -984,7 +984,11 @@ void CaptureWidget::mousePressEvent(QMouseEvent* e)
     // display, and it is authoritative even if an Enter was dropped.
     emit editingStarted(monitorIndex());
 
-    activateWindow();
+    // Not on Wayland: see CaptureToolButton::mousePressEvent. A click here can
+    // close the window too (accept on select, copy on double-click).
+    if (QGuiApplication::platformName() != QLatin1String("wayland")) {
+        activateWindow();
+    }
     m_startMove = false;
     m_startMovePos = QPoint();
     m_mousePressedPos = e->pos();
