@@ -2,6 +2,7 @@
 
 #include "resizehandles.h"
 
+#include <algorithm>
 #include <utility>
 
 namespace ResizeHandles {
@@ -59,6 +60,14 @@ int squaredDistance(const QPoint& a, const QPoint& b)
     return QPoint::dotProduct(d, d);
 }
 
+}
+
+QRect boxOf(const QPoint& first, const QPoint& second)
+{
+    return { QPoint(std::min(first.x(), second.x()),
+                    std::min(first.y(), second.y())),
+             QPoint(std::max(first.x(), second.x()),
+                    std::max(first.y(), second.y())) };
 }
 
 QPoint handleCenter(const QRect& box, Handle handle)

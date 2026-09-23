@@ -20,6 +20,9 @@ class TestResizeHandles : public QObject
     Q_OBJECT
 
 private slots:
+    void boxOf_data();
+    void boxOf();
+
     void handleAt_data();
     void handleAt();
     void handleAt_tinyBoxPrefersCorner();
@@ -41,6 +44,33 @@ private slots:
     void objectCursor_data();
     void objectCursor();
 };
+
+void TestResizeHandles::boxOf_data()
+{
+    QTest::addColumn<QPoint>("first");
+    QTest::addColumn<QPoint>("second");
+    QTest::addColumn<QRect>("expected");
+
+    const QRect box(QPoint(0, 0), QPoint(10, 10));
+    QTest::newRow("drawn down-right") << QPoint(0, 0) << QPoint(10, 10) << box;
+    // QRect(first, second).normalized() loses a pixel on each reversed side.
+    QTest::newRow("drawn up-left") << QPoint(10, 10) << QPoint(0, 0) << box;
+    QTest::newRow("drawn up-right") << QPoint(0, 10) << QPoint(10, 0) << box;
+    QTest::newRow("drawn down-left") << QPoint(10, 0) << QPoint(0, 10) << box;
+    QTest::newRow("reversed, one pixel apart")
+      << QPoint(1, 0) << QPoint(0, 10) << QRect(QPoint(0, 0), QPoint(1, 10));
+    QTest::newRow("single point")
+      << QPoint(5, 5) << QPoint(5, 5) << QRect(QPoint(5, 5), QPoint(5, 5));
+}
+
+void TestResizeHandles::boxOf()
+{
+    QFETCH(QPoint, first);
+    QFETCH(QPoint, second);
+    QFETCH(QRect, expected);
+
+    QCOMPARE(ResizeHandles::boxOf(first, second), expected);
+}
 
 void TestResizeHandles::handleAt_data()
 {

@@ -193,7 +193,7 @@ ResizeHandles::Handle AbstractTwoPointTool::handleAt(const QPoint& pos,
     switch (m_resizeMode) {
         case ResizeMode::Box:
             return ResizeHandles::handleAt(
-              QRect(m_points.first, m_points.second).normalized(),
+              ResizeHandles::boxOf(m_points.first, m_points.second),
               pos,
               tolerance);
         case ResizeMode::Ends:
@@ -215,7 +215,7 @@ void AbstractTwoPointTool::dragHandle(const QPoint& pos)
 {
     if (m_resizeMode == ResizeMode::Box) {
         const QRect box = ResizeHandles::resized(
-          QRect(m_dragStart.first, m_dragStart.second).normalized(),
+          ResizeHandles::boxOf(m_dragStart.first, m_dragStart.second),
           m_dragHandle,
           pos);
         m_points = { box.topLeft(), box.bottomRight() };
@@ -228,7 +228,7 @@ void AbstractTwoPointTool::dragHandle(const QPoint& pos)
 void AbstractTwoPointTool::drawObjectSelection(QPainter& painter)
 {
     if (m_resizeMode == ResizeMode::Box) {
-        const QRect box = QRect(m_points.first, m_points.second).normalized();
+        const QRect box = ResizeHandles::boxOf(m_points.first, m_points.second);
         QVector<QPoint> centers;
         for (auto h : { ResizeHandles::TopLeft,
                         ResizeHandles::Top,
