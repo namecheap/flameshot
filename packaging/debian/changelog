@@ -1,3 +1,9 @@
+flameshot (15.0.0.2-1) unstable; urgency=medium
+
+  * Namecheap edition: follow-cursor multi-display capture and Wayland multi-display fixes
+
+ -- Yurii Puchkov <panpuchkov@gmail.com>  Wed, 23 Sep 2026 12:00:00 -0600
+
 flameshot (15.0.0.1-rc1-1) unstable; urgency=medium
 
   * Namecheap edition: S3 upload storage on top of upstream 15.0.0

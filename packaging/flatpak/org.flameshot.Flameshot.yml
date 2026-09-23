@@ -41,7 +41,7 @@ modules:
       - type: git
         url: https://github.com/namecheap/flameshot.git
         branch: master
-        # tag: v15.0.0.1
+        # tag: v15.0.0.2
         # commit: e408812d77ff1835957f85796c4cf737466bd69d
 
     cleanup:
