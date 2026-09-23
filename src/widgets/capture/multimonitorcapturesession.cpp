@@ -162,18 +162,27 @@ void MultiMonitorCaptureSession::handleWidgetDestroyed(QObject* dying)
         return;
     }
 
+    // A widget emits destroyed() from ~QWidget, before its QPointer is
+    // cleared, so the dying one still looks alive here. It is past
+    // ~CaptureWidget and must not be touched.
+    int dyingIndex = -1;
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        if (m_widgets.at(i) == dying) {
+            dyingIndex = i;
+            break;
+        }
+    }
+
     // A widget went away on its own: the user pressed Esc, or the capture
     // finished. Either way the session is over, so take the rest down quietly
     // -- the widget that closed has already reported the outcome.
     if (!m_tracker.isLatched()) {
-        discardAllExcept(-1);
+        discardAllExcept(dyingIndex);
     }
 
-    // A widget emits destroyed() from ~QWidget, before its QPointer is
-    // cleared, so the dying one still looks alive here.
     bool anyLeft = false;
-    for (const auto& widget : m_widgets) {
-        if (widget && widget != dying) {
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        if (m_widgets.at(i) && i != dyingIndex) {
             anyLeft = true;
             break;
         }
