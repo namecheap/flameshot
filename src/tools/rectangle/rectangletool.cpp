@@ -11,6 +11,7 @@ RectangleTool::RectangleTool(QObject* parent)
   : AbstractTwoPointTool(parent)
 {
     m_supportsDiagonalAdj = true;
+    m_resizable = true;
 }
 
 QIcon RectangleTool::icon(const QColor& background, bool inEditor) const

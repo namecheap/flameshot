@@ -14,6 +14,7 @@
 #include "tools/capturecontext.h"
 #include "tools/capturetool.h"
 #include "utils/confighandler.h"
+#include "utils/resizehandles.h"
 #include "widgets/capture/buttonhandler.h"
 #include "widgets/capture/capturetoolbutton.h"
 #include "widgets/capture/capturetoolobjects.h"
@@ -157,6 +158,7 @@ private:
     void initQuitPrompt();
     void updateSizeIndicator();
     void updateCursor();
+    ResizeHandles::Handle resizeHandleAt(const QPoint& pos);
     void updateSelectionState();
     void updateTool(CaptureTool* tool);
     void updateLayersPanel();
@@ -263,6 +265,10 @@ private:
     // For start moving after more than X offset
     QPoint m_startMovePos;
     bool m_startMove;
+
+    // Resize handle being dragged and the object's box when the drag began
+    ResizeHandles::Handle m_resizeHandle{ ResizeHandles::None };
+    QRect m_resizeStartRect;
 
     // Grid
     bool m_displayGrid{ false };

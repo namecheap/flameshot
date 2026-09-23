@@ -19,6 +19,9 @@ public:
     QRect boundingRect() const override;
     void move(const QPoint& pos) override;
     const QPoint* pos() override;
+    QRect resizableRect() const override;
+    void setResizableRect(const QRect& rect) override;
+    void drawObjectSelection(QPainter& painter) override;
     int size() const override { return m_thickness; };
     const QColor& color() { return m_color; };
     const QPair<QPoint, QPoint> points() const { return m_points; };
@@ -51,4 +54,6 @@ protected:
     // use m_padding to extend the area of the backup
     bool m_supportsOrthogonalAdj = false;
     bool m_supportsDiagonalAdj = false;
+    // Box-shaped tools show resize handles when selected.
+    bool m_resizable = false;
 };

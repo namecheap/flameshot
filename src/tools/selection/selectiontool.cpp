@@ -9,6 +9,7 @@ SelectionTool::SelectionTool(QObject* parent)
   : AbstractTwoPointTool(parent)
 {
     m_supportsDiagonalAdj = true;
+    m_resizable = true;
 }
 
 bool SelectionTool::closeOnButtonPressed() const

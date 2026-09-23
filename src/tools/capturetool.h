@@ -167,6 +167,10 @@ public:
     virtual void move(const QPoint& pos) { Q_UNUSED(pos) };
     virtual const QPoint* pos() { return nullptr; };
 
+    // Box the object's resize handles sit on; empty if it cannot be resized.
+    virtual QRect resizableRect() const { return {}; }
+    virtual void setResizableRect(const QRect& rect) { Q_UNUSED(rect) }
+
 signals:
     void requestAction(Request r);
 
