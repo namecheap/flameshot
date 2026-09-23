@@ -6,6 +6,8 @@
 
 using MonitorFocus::ActiveMonitorTracker;
 
+Q_DECLARE_METATYPE(std::optional<QPoint>)
+
 // Geometry as Qt reports it on a real mixed-DPR two-monitor setup:
 // index 0 = DP-1 (2560x1440 at +1920+0), index 1 = eDP-1 (1920x1080 at +0+360).
 // The layout is L-shaped, so it has a genuine gap above eDP-1.
@@ -22,6 +24,9 @@ private slots:
     void monitorIndexAt_data();
     void monitorIndexAt();
     void monitorIndexAt_emptyLayout();
+
+    void monitorWithoutPicker_data();
+    void monitorWithoutPicker();
 
     void tracker_startsUnset();
     void tracker_pointerAtSetsActive();
@@ -63,6 +68,35 @@ void TestMonitorFocus::monitorIndexAt()
 void TestMonitorFocus::monitorIndexAt_emptyLayout()
 {
     QCOMPARE(MonitorFocus::monitorIndexAt({}, QPoint(0, 0)), -1);
+}
+
+void TestMonitorFocus::monitorWithoutPicker_data()
+{
+    QTest::addColumn<bool>("followCursor");
+    QTest::addColumn<std::optional<QPoint>>("cursorPos");
+    QTest::addColumn<int>("expected");
+
+    using Pos = std::optional<QPoint>;
+    QTest::newRow("follow cursor, pointer on DP-1")
+      << true << Pos(QPoint(2000, 100)) << 0;
+    QTest::newRow("follow cursor, pointer on eDP-1")
+      << true << Pos(QPoint(100, 800)) << 1;
+    // Wayland: no global pointer position to go by.
+    QTest::newRow("follow cursor, pointer unknown") << true << Pos() << -1;
+    QTest::newRow("follow cursor, pointer in the gap")
+      << true << Pos(QPoint(100, 100)) << -1;
+    QTest::newRow("ask, pointer on DP-1")
+      << false << Pos(QPoint(2000, 100)) << -1;
+}
+
+void TestMonitorFocus::monitorWithoutPicker()
+{
+    QFETCH(bool, followCursor);
+    QFETCH(std::optional<QPoint>, cursorPos);
+    QFETCH(int, expected);
+    QCOMPARE(
+      MonitorFocus::monitorWithoutPicker(followCursor, cursorPos, layout()),
+      expected);
 }
 
 void TestMonitorFocus::tracker_startsUnset()
