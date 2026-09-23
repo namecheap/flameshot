@@ -993,6 +993,18 @@ void CaptureWidget::mousePressEvent(QMouseEvent* e)
         updateCursor();
         return;
     }
+    // Checked before the capture area can claim the press: a handle may sit
+    // outside it.
+    if (e->button() == Qt::LeftButton) {
+        m_resizeHandle = resizeHandleAt(e->pos());
+        if (m_resizeHandle != ResizeHandles::None) {
+            m_mouseIsClicked = true;
+            m_resizeStartRect = activeToolObject()->resizableRect();
+            m_captureToolObjectsBackup = m_captureToolObjects;
+            updateCursor();
+            return;
+        }
+    }
     // reset object selection if capture area selection is active
     if (m_selection->getMouseSide(e->pos()) != SelectionWidget::CENTER) {
         m_panel->setActiveLayer(-1);
@@ -1079,7 +1091,15 @@ void CaptureWidget::mouseMoveEvent(QMouseEvent* e)
     }
 
     // The rest assumes that left mouse button is clicked
-    if (!m_activeButton && m_panel->activeLayerIndex() >= 0) {
+    if (m_resizeHandle != ResizeHandles::None) {
+        auto activeTool = activeToolObject();
+        update(paddedUpdateRect(activeTool->boundingRect()));
+        activeTool->setResizableRect(ResizeHandles::resized(
+          m_resizeStartRect,
+          m_resizeHandle,
+          m_displayGrid ? snapToGrid(e->pos()) : e->pos()));
+        drawToolsData();
+    } else if (!m_activeButton && m_panel->activeLayerIndex() >= 0) {
         // Move existing object
         if (!m_startMove) {
             // Check for the minimal offset to start moving an object
@@ -1149,6 +1169,13 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
             m_context.color = ConfigHandler().drawColor();
             m_panel->show();
         }
+    } else if (m_mouseIsClicked && m_resizeHandle != ResizeHandles::None) {
+        auto activeTool = activeToolObject();
+        if (activeTool && activeTool->resizableRect() != m_resizeStartRect) {
+            pushObjectsStateToUndoStack();
+        } else {
+            m_captureToolObjectsBackup.clear();
+        }
     } else if (m_mouseIsClicked) {
         if (m_activeTool) {
             // end draw/edit
@@ -1167,6 +1194,7 @@ void CaptureWidget::mouseReleaseEvent(QMouseEvent* e)
     }
     m_mouseIsClicked = false;
     m_activeToolIsMoved = false;
+    m_resizeHandle = ResizeHandles::None;
 
     updateSelectionState();
     updateCursor();
@@ -1875,10 +1903,37 @@ void CaptureWidget::updateSizeIndicator()
     }
 }
 
+ResizeHandles::Handle CaptureWidget::resizeHandleAt(const QPoint& pos)
+{
+    auto toolItem = activeToolObject();
+    if (m_activeButton || !toolItem || toolItem->editMode()) {
+        return ResizeHandles::None;
+    }
+    const int tolerance = 8;
+    return ResizeHandles::handleAt(toolItem->resizableRect(), pos, tolerance);
+}
+
 void CaptureWidget::updateCursor()
 {
+    // m_context.mousePos rather than QCursor::pos(): Wayland gives a client
+    // no global cursor position.
+    auto handle = m_resizeHandle != ResizeHandles::None
+                    ? m_resizeHandle
+                    : resizeHandleAt(m_context.mousePos);
     if (m_colorPicker && m_colorPicker->isVisible()) {
         setCursor(Qt::ArrowCursor);
+    } else if (handle == ResizeHandles::TopLeft ||
+               handle == ResizeHandles::BottomRight) {
+        setCursor(Qt::SizeFDiagCursor);
+    } else if (handle == ResizeHandles::TopRight ||
+               handle == ResizeHandles::BottomLeft) {
+        setCursor(Qt::SizeBDiagCursor);
+    } else if (handle == ResizeHandles::Left ||
+               handle == ResizeHandles::Right) {
+        setCursor(Qt::SizeHorCursor);
+    } else if (handle == ResizeHandles::Top ||
+               handle == ResizeHandles::Bottom) {
+        setCursor(Qt::SizeVerCursor);
     } else if (m_activeButton != nullptr &&
                activeButtonToolType() != CaptureTool::TYPE_MOVESELECTION) {
         setCursor(Qt::CrossCursor);

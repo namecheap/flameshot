@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2017-2019 Alejandro Sirgo Rica & Contributors
 
 #include "abstracttwopointtool.h"
+#include "utils/resizehandles.h"
 
 #include <QCursor>
 #include <QScreen>
@@ -46,6 +47,7 @@ void AbstractTwoPointTool::copyParams(const AbstractTwoPointTool* from,
     to->m_padding = from->m_padding;
     to->m_supportsOrthogonalAdj = from->m_supportsOrthogonalAdj;
     to->m_supportsDiagonalAdj = from->m_supportsDiagonalAdj;
+    to->m_resizable = from->m_resizable;
 }
 
 bool AbstractTwoPointTool::isValid() const
@@ -184,4 +186,44 @@ void AbstractTwoPointTool::move(const QPoint& pos)
 const QPoint* AbstractTwoPointTool::pos()
 {
     return &m_points.first;
+}
+
+QRect AbstractTwoPointTool::resizableRect() const
+{
+    if (!m_resizable) {
+        return {};
+    }
+    return QRect(m_points.first, m_points.second).normalized();
+}
+
+void AbstractTwoPointTool::setResizableRect(const QRect& rect)
+{
+    m_points.first = rect.topLeft();
+    m_points.second = rect.bottomRight();
+}
+
+void AbstractTwoPointTool::drawObjectSelection(QPainter& painter)
+{
+    if (!m_resizable) {
+        CaptureTool::drawObjectSelection(painter);
+        return;
+    }
+    const int radius = 5;
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(Qt::white, 1.5));
+    painter.setBrush(QColor(0x1e, 0x6f, 0xe8));
+    const QRect box = resizableRect();
+    for (auto h : { ResizeHandles::TopLeft,
+                    ResizeHandles::Top,
+                    ResizeHandles::TopRight,
+                    ResizeHandles::Right,
+                    ResizeHandles::BottomRight,
+                    ResizeHandles::Bottom,
+                    ResizeHandles::BottomLeft,
+                    ResizeHandles::Left }) {
+        painter.drawEllipse(
+          ResizeHandles::handleCenter(box, h), radius, radius);
+    }
+    painter.restore();
 }

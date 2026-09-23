@@ -13,7 +13,9 @@
 
 InvertTool::InvertTool(QObject* parent)
   : AbstractTwoPointTool(parent)
-{}
+{
+    m_resizable = true;
+}
 
 QIcon InvertTool::icon(const QColor& background, bool inEditor) const
 {
