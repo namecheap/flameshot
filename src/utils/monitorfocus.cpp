@@ -18,6 +18,16 @@ int monitorIndexAt(const QVector<QRect>& monitorGeometries,
     return -1;
 }
 
+int monitorWithoutPicker(bool followCursor,
+                         const std::optional<QPoint>& cursorPos,
+                         const QVector<QRect>& monitorGeometries)
+{
+    if (!followCursor || !cursorPos) {
+        return -1;
+    }
+    return monitorIndexAt(monitorGeometries, *cursorPos);
+}
+
 ActiveMonitorTracker::ActiveMonitorTracker(int monitorCount, int initialMonitor)
   : m_count(monitorCount)
   , m_active(initialMonitor)

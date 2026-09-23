@@ -1,13 +1,16 @@
 
 #include "screengrabber.h"
+#include "config/generalconf.h"
 #include "core/qguiappcurrentscreen.h"
 #include "utils/abstractlogger.h"
 #include "utils/confighandler.h"
 #include "utils/dprscaling.h"
+#include "utils/monitorfocus.h"
 #include "utils/monitorpreview.h"
 #include "utils/systemnotification.h"
 
 #include <QApplication>
+#include <QCursor>
 #include <QEventLoop>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -268,9 +271,28 @@ QPixmap ScreenGrabber::selectMonitorAndCrop(const QPixmap& fullScreenshot,
         return cropToMonitor(fullScreenshot, 0);
     }
 
-    // "Capture the display under the cursor" no longer reaches this function:
-    // MultiMonitorCaptureSession builds a widget per display with the monitor
-    // already chosen, so the picker below is only for the other mode.
+    // The interactive capture follows the cursor with
+    // MultiMonitorCaptureSession and never gets here; a one-shot capture
+    // (`flameshot screen`) does, and honours the same setting.
+    {
+        std::optional<QPoint> cursorPos;
+        if (!m_info.waylandDetected()) {
+            cursorPos = QCursor::pos();
+        }
+        QVector<QRect> geometries;
+        for (QScreen* screen : screens) {
+            geometries.append(screen->geometry());
+        }
+        const int monitor = MonitorFocus::monitorWithoutPicker(
+          ConfigHandler().monitorSelectionMode() ==
+            GeneralConf::monitor_selection_follow_cursor,
+          cursorPos,
+          geometries);
+        if (monitor >= 0) {
+            m_selectedMonitor = monitor;
+            return cropToMonitor(fullScreenshot, monitor);
+        }
+    }
 
     if (m_monitorSelectionActive) {
         AbstractLogger::error()

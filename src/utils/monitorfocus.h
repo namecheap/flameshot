@@ -6,6 +6,8 @@
 #include <QRect>
 #include <QVector>
 
+#include <optional>
+
 /// Pure decision logic for which monitor a capture session is aimed at.
 /// QtCore only, no widgets and no platform calls, so it is unit-testable
 /// headless.
@@ -16,6 +18,13 @@ namespace MonitorFocus {
 /// right edges are exclusive; a shared edge resolves to the lowest index.
 int monitorIndexAt(const QVector<QRect>& monitorGeometries,
                    const QPoint& globalPos);
+
+/// Monitor a one-shot capture takes without asking: the one under the pointer
+/// when following the cursor, or -1 to show the picker. -1 as well when the
+/// pointer position is unknown (Wayland) or lies between monitors.
+int monitorWithoutPicker(bool followCursor,
+                         const std::optional<QPoint>& cursorPos,
+                         const QVector<QRect>& monitorGeometries);
 
 /// Tracks which monitor is armed, and freezes that choice once editing starts.
 ///
