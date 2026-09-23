@@ -378,6 +378,12 @@ void CaptureWidget::setArmed(bool armed)
         if (m_buttonHandler) {
             m_buttonHandler->hide();
         }
+    } else if (m_buttonHandler && m_selection &&
+               m_selection->isVisibleTo(this)) {
+        // Not via geometrySettled: that would also run ACCEPT_ON_SELECT
+        // before the user has selected anything.
+        m_buttonHandler->updatePosition(m_selection->geometry());
+        m_buttonHandler->show();
     }
 
     if (armed) {
