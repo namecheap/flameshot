@@ -1,5 +1,5 @@
 Name:    flameshot
-Version: 15.0.0.2
+Version: 15.0.0.3
 Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
 
@@ -144,6 +144,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Sun Sep 27 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.3
+- Namecheap edition: resize annotations by dragging handles
+
 * Wed Sep 23 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.2
 - Namecheap edition: follow-cursor multi-display capture and Wayland multi-display fixes
 
