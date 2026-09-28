@@ -1,3 +1,9 @@
+flameshot (15.0.0.3-1) unstable; urgency=medium
+
+  * Namecheap edition: resize annotations by dragging handles
+
+ -- Yurii Puchkov <panpuchkov@gmail.com>  Sun, 27 Sep 2026 12:00:00 -0600
+
 flameshot (15.0.0.2-1) unstable; urgency=medium
 
   * Namecheap edition: follow-cursor multi-display capture and Wayland multi-display fixes
