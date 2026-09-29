@@ -1,0 +1,13 @@
+<CPackWiXPatch xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  <CPackWiXFragment Id="#PRODUCT">
+    <!-- Flameshot ignores Restart Manager close requests while idle in the
+         tray, so its locked files would only be removed after a reboot. -->
+    <util:CloseApplication Id="CloseFlameshot" Target="flameshot.exe"
+                           TerminateProcess="1" RebootPrompt="no"/>
+    <!-- WixUtil schedules this before InstallFiles, which is after both
+         RemoveFiles and the old version's removal on a major upgrade. -->
+    <InstallExecuteSequence>
+      <Custom Action="WixCloseApplications" Before="RemoveExistingProducts"/>
+    </InstallExecuteSequence>
+  </CPackWiXFragment>
+</CPackWiXPatch>
