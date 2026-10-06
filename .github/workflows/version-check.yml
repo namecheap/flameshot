@@ -1,0 +1,24 @@
+name: version-check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source code
+      if: github.event_name == 'push'
+      uses: actions/checkout@v6
+    - name: Checkout Source code
+      if: github.event_name == 'pull_request'
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    - name: Test version check
+      run: scripts/tests/check-version-test.sh
+    - name: Packaging versions match FLAMESHOT_VERSION
+      run: scripts/check-version.sh .
