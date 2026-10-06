@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 # cmake_policy(SET CMP0076 OLD)
 
-set(FLAMESHOT_VERSION 15.0.0.3)
+set(FLAMESHOT_VERSION 15.0.0.4)
 
 # Namecheap fork
 set(GIT_API_URL "https://api.github.com/repos/namecheap/flameshot/releases/latest")
@@ -64,7 +64,7 @@ if(WIN32)
   add_definitions(-DFLAMESHOT_VERSION_MAJOR=${CMAKE_PROJECT_VERSION_MAJOR})
   add_definitions(-DFLAMESHOT_VERSION_MINOR=${CMAKE_PROJECT_VERSION_MINOR})
   add_definitions(-DFLAMESHOT_VERSION_BUGFIX=${CMAKE_PROJECT_VERSION_PATCH})
-  add_definitions(-DFLAMESHOT_VERSION_BUILD=1)
+  add_definitions(-DFLAMESHOT_VERSION_BUILD=${CMAKE_PROJECT_VERSION_TWEAK})
   add_definitions(-DFLAMESHOT_VERSION_STRING="${PROJECT_VERSION}")
 elseif(APPLE)
   set(Qt6_DIR "$(brew --prefix qt6)/lib/cmake/Qt6/" CACHE PATH "directory where Qt6Config.cmake exists.")
@@ -196,6 +196,9 @@ if(WIN32)
     set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "${CPACK_PACKAGE_HOMEPAGE_URL}")
     set(CPACK_WIX_ROOT_FEATURE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-dcl:high") # set high compression
+    set(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/packaging/win-installer/patch.wxs")
+    set(CPACK_WIX_EXTENSIONS WixUtilExtension)
+    set(CPACK_WIX_CUSTOM_XMLNS "util=http://schemas.microsoft.com/wix/UtilExtension")
 
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/packaging/win-installer/LICENSE/GPL-3.0.txt")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")

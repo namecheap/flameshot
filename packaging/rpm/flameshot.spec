@@ -1,5 +1,5 @@
 Name:    flameshot
-Version: 15.0.0.3
+Version: 15.0.0.4
 Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
 
@@ -144,6 +144,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Mon Oct 05 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.4
+- Namecheap edition: close Flameshot before the MSI removes its files; Windows exe reports its full version
+
 * Sun Sep 27 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.3
 - Namecheap edition: resize annotations by dragging handles
 
