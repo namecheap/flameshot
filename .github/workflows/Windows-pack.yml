@@ -156,6 +156,31 @@ jobs:
         run: |
           Move-Item -Path $env:GITHUB_WORKSPACE/build/Package/Flameshot-*-${{ matrix.config.pak_arch }}.msi -Destination $env:GITHUB_WORKSPACE/build/Package/installer/Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi
 
+      - name: Check installer action sequence
+        if:  matrix.type == 'installer'
+        shell: pwsh
+        run: |
+          # RemoveExistingProducts runs right after InstallInitialize, where Windows
+          # Installer fails with error 2613 if anything has already been written
+          # to the execution script, as WixCloseApplications does.
+          function Invoke($obj, $member, $kind, $argList) {
+            $obj.GetType().InvokeMember($member, $kind, $null, $obj, $argList)
+          }
+          $msi = "$env:GITHUB_WORKSPACE/build/Package/installer/Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi"
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $db = Invoke $installer OpenDatabase InvokeMethod @($msi, 0)
+          $view = Invoke $db OpenView InvokeMethod @("SELECT Action, Sequence FROM InstallExecuteSequence")
+          Invoke $view Execute InvokeMethod $null | Out-Null
+          $seq = @{}
+          while ($rec = Invoke $view Fetch InvokeMethod $null) {
+            $seq[(Invoke $rec StringData GetProperty @(1))] = Invoke $rec IntegerData GetProperty @(2)
+          }
+          $seq.GetEnumerator() | Sort-Object Value | Format-Table -AutoSize
+          if ($seq['WixCloseApplications'] -le $seq['RemoveExistingProducts']) {
+            Write-Error "WixCloseApplications ($($seq['WixCloseApplications'])) must run after RemoveExistingProducts ($($seq['RemoveExistingProducts']))"
+            exit 1
+          }
+
       - name: Package Prepare (portable)
         if:  matrix.type == 'portable'
         shell: pwsh
