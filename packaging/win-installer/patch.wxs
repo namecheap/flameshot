@@ -4,10 +4,12 @@
          tray, so its locked files would only be removed after a reboot. -->
     <util:CloseApplication Id="CloseFlameshot" Target="flameshot.exe"
                            TerminateProcess="1" RebootPrompt="no"/>
-    <!-- WixUtil schedules this before InstallFiles, which is after both
-         RemoveFiles and the old version's removal on a major upgrade. -->
+    <!-- WixUtil schedules this before InstallFiles, after RemoveFiles has
+         already run on uninstall. It must stay after RemoveExistingProducts:
+         CPack runs that right after InstallInitialize, where any deferred
+         action already scheduled makes the install fail with error 2613. -->
     <InstallExecuteSequence>
-      <Custom Action="WixCloseApplications" Before="RemoveExistingProducts"/>
+      <Custom Action="WixCloseApplications" Before="RemoveFiles"/>
     </InstallExecuteSequence>
   </CPackWiXFragment>
 </CPackWiXPatch>
