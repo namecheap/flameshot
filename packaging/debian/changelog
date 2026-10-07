@@ -1,3 +1,9 @@
+flameshot (15.0.0.5-1) unstable; urgency=medium
+
+  * Namecheap edition: fix Windows installer error 2613 when Flameshot is running
+
+ -- Yurii Puchkov <panpuchkov@gmail.com>  Tue, 06 Oct 2026 12:00:00 -0600
+
 flameshot (15.0.0.4-1) unstable; urgency=medium
 
   * Namecheap edition: close Flameshot before the MSI removes its files; Windows exe reports its full version
