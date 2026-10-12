@@ -156,7 +156,7 @@ jobs:
         run: |
           Move-Item -Path $env:GITHUB_WORKSPACE/build/Package/Flameshot-*-${{ matrix.config.pak_arch }}.msi -Destination $env:GITHUB_WORKSPACE/build/Package/installer/Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi
 
-      - name: Check installer action sequence
+      - name: Check installer
         if:  matrix.type == 'installer'
         shell: pwsh
         run: |
@@ -178,6 +178,15 @@ jobs:
           $seq.GetEnumerator() | Sort-Object Value | Format-Table -AutoSize
           if ($seq['WixCloseApplications'] -le $seq['RemoveExistingProducts']) {
             Write-Error "WixCloseApplications ($($seq['WixCloseApplications'])) must run after RemoveExistingProducts ($($seq['RemoveExistingProducts']))"
+            exit 1
+          }
+          # Per-user MSIs deployed as SYSTEM never appear in users' Programs and Features.
+          $view = Invoke $db OpenView InvokeMethod @("SELECT Value FROM Property WHERE Property = 'ALLUSERS'")
+          Invoke $view Execute InvokeMethod $null | Out-Null
+          $rec = Invoke $view Fetch InvokeMethod $null
+          $allUsers = if ($rec) { Invoke $rec StringData GetProperty @(1) }
+          if ($allUsers -ne '1') {
+            Write-Error "ALLUSERS must be 1 for a per-machine install, got '$allUsers'"
             exit 1
           }
 
