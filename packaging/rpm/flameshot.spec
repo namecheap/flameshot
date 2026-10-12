@@ -1,5 +1,5 @@
 Name:    flameshot
-Version: 15.0.0.5
+Version: 15.0.0.6
 Release: 1%{?dist}
 Summary: Powerful yet simple to use screenshot software
 
@@ -144,6 +144,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Mon Oct 12 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.6
+- Namecheap edition: install per-machine on Windows so system-wide deployments appear in Programs and Features
+
 * Tue Oct 06 2026 Yurii Puchkov <panpuchkov@gmail.com> - 15.0.0.5
 - Namecheap edition: fix Windows installer error 2613 when Flameshot is running
 

@@ -1,3 +1,9 @@
+flameshot (15.0.0.6-1) unstable; urgency=medium
+
+  * Namecheap edition: install per-machine on Windows so system-wide deployments appear in Programs and Features
+
+ -- Yurii Puchkov <panpuchkov@gmail.com>  Mon, 12 Oct 2026 12:00:00 -0600
+
 flameshot (15.0.0.5-1) unstable; urgency=medium
 
   * Namecheap edition: fix Windows installer error 2613 when Flameshot is running
