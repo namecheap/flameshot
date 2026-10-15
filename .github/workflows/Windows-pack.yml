@@ -194,7 +194,8 @@ jobs:
         if:  matrix.type == 'installer'
         shell: pwsh
         run: |
-          $msi = "$env:GITHUB_WORKSPACE/build/Package/installer/Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi"
+          # msiexec rejects forward slashes in the package path.
+          $msi = "$env:GITHUB_WORKSPACE\build\Package\installer\Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi"
           $dir = "$env:ProgramFiles\Flameshot"
           foreach ($step in @("/i", "/x")) {
             $log = "$env:RUNNER_TEMP\msi$($step.Trim('/')).log"
