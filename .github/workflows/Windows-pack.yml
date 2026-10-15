@@ -190,6 +190,33 @@ jobs:
             exit 1
           }
 
+      - name: Check installer leaves nothing behind
+        if:  matrix.type == 'installer'
+        shell: pwsh
+        run: |
+          $msi = "$env:GITHUB_WORKSPACE/build/Package/installer/Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi"
+          $dir = "$env:ProgramFiles\Flameshot"
+          foreach ($step in @("/i", "/x")) {
+            $log = "$env:RUNNER_TEMP\msi$($step.Trim('/')).log"
+            $p = Start-Process msiexec.exe -ArgumentList "$step `"$msi`" /qn /norestart /l*v `"$log`"" -Wait -PassThru
+            if ($p.ExitCode -ne 0) {
+              Write-Error "msiexec $step failed with exit code $($p.ExitCode)"
+              exit 1
+            }
+          }
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Recurse -Force | Select-Object -ExpandProperty FullName
+            Write-Error "$dir is still there after uninstall"
+            exit 1
+          }
+
+      - name: Upload installer logs
+        if:  failure() && matrix.type == 'installer'
+        uses: actions/upload-artifact@v7
+        with:
+          name: msi-logs-win-${{ matrix.config.arch }}
+          path: ${{ runner.temp }}/msi*.log
+
       - name: Package Prepare (portable)
         if:  matrix.type == 'portable'
         shell: pwsh
