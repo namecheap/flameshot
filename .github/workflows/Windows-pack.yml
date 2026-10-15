@@ -197,14 +197,25 @@ jobs:
           # msiexec rejects forward slashes in the package path.
           $msi = "$env:GITHUB_WORKSPACE\build\Package\installer\Flameshot-${{ env.VERSION }}-${{ matrix.config.pak_arch }}.msi"
           $dir = "$env:ProgramFiles\Flameshot"
-          foreach ($step in @("/i", "/x")) {
+          function Msiexec($step) {
             $log = "$env:RUNNER_TEMP\msi$($step.Trim('/')).log"
             $p = Start-Process msiexec.exe -ArgumentList "$step `"$msi`" /qn /norestart /l*v `"$log`"" -Wait -PassThru
-            if ($p.ExitCode -ne 0) {
+            Write-Output "msiexec $step exit code $($p.ExitCode)"
+            # 3010: done, but some files are only removed on reboot.
+            if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) {
               Write-Error "msiexec $step failed with exit code $($p.ExitCode)"
               exit 1
             }
           }
+          Msiexec "/i"
+          # Users uninstall while Flameshot sits in the tray, so it must be running here too.
+          Start-Process "$dir\bin\flameshot.exe"
+          Start-Sleep -Seconds 5
+          if (-not (Get-Process flameshot -ErrorAction SilentlyContinue)) {
+            Write-Error "flameshot.exe did not stay running, so the uninstall check would prove nothing"
+            exit 1
+          }
+          Msiexec "/x"
           if (Test-Path $dir) {
             Get-ChildItem $dir -Recurse -Force | Select-Object -ExpandProperty FullName
             Write-Error "$dir is still there after uninstall"
